@@ -31,6 +31,6 @@ Always use checked arithmetic operations when dealing with untrusted input or wh
 ## Contributing
 Contributions are welcome! Please feel free to submit a Pull Request. This project needs more testing and verification.
 ## License
-This project is licensed under the MIT License - see the [LICENSE](https://github\.com/jmg049/i24/blob/main/LICENSE\) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/jmg049/i24/blob/main/LICENSE) file for details.
 ## Related Projects
-This crate was developed as part of the [Wavers](https://crates\.io/crates/wavers\) project, a Wav file reader and writer for Rust.
+This crate was developed as part of the [Wavers](https://crates.io/crates/wavers) project, a Wav file reader and writer for Rust.

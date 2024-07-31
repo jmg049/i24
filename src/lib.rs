@@ -22,7 +22,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! i24 = "1.0.0"
+//! i24 = "1.0.1"
 //! ```
 //!
 //! Then, in your Rust code:
@@ -71,6 +71,9 @@ use std::{
     ops::{Neg, Not},
     str::FromStr,
 };
+
+#[cfg(feature = "pyo3")]
+use pyo3::prelude::*;
 
 /// Represents errors that can occur when working with the `i24` type.
 #[derive(Debug, PartialEq, Eq)]
