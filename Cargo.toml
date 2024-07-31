@@ -3,12 +3,11 @@ name = "i24"
 version = "1.0.0"
 edition = "2021"
 license = "MIT"
-license-file = "LICENSE"
 description = "A Rust library for working with 24-bit integers."
 readme = "README.md"
 repository = "https://github.com/jmg049/i24"
 documentation = "https://docs.rs/i24"
-categories = ["data-structures", "math", "numerics"]
+categories = ["data-structures", "mathematics", "encoding"]
 
 [dependencies]
 bytemuck = "1.16.1"
