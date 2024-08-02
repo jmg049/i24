@@ -117,7 +117,7 @@ impl From<std::num::ParseIntError> for I24Error {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-/// An experimental 24-bit unsigned integer type.
+/// An experimental 24-bit signed integer type.
 ///
 /// This type is a wrapper around ``[u8; 3]`` and is used to represent 24-bit audio samples.
 /// It should not be used anywhere important. It is still unverified and experimental.
