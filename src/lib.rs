@@ -122,7 +122,7 @@ mod repr;
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-/// An experimental 24-bit unsigned integer type.
+/// An experimental 24-bit signed integer type.
 ///
 /// It should not be used anywhere important. It is still unverified and experimental.
 ///
