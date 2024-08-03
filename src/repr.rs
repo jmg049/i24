@@ -122,11 +122,15 @@ impl I24Repr {
         // can't just make a `swap_bytes` without endianness checks
         // because it also swaps their `repr`, and so this is easier to do
         #[cfg(target_endian = "little")]
-        { self.to_be() }
+        {
+            self.to_be()
+        }
         #[cfg(target_endian = "big")]
-        { self.to_le() }
+        {
+            self.to_le()
+        }
     }
-    
+
     #[inline(always)]
     pub const fn to_be(self) -> I24Repr {
         #[cfg(target_endian = "big")]
@@ -178,7 +182,7 @@ impl I24Repr {
         #[cfg(target_endian = "little")]
         {
             let val = self.to_bits().swap_bytes();
- 
+
             // Safety:
             // since this is little endian, the bytes started off being laid out as
             // [data1, data2, data3, zero]

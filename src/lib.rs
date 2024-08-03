@@ -29,7 +29,7 @@
 //!
 //! ```rust
 //! use i24::i24_const;
-//! 
+//!
 //! let a = i24_const!(1000);
 //! let b = i24_const!(2000);
 //! let c = a + b;
@@ -146,7 +146,11 @@ macro_rules! i24_const {
         const {
             match $crate::i24::from_i32($e) {
                 Some(x) => x,
-                None => panic!(concat!("out of range value ", stringify!($e), " used as an i24 constant")),
+                None => panic!(concat!(
+                    "out of range value ",
+                    stringify!($e),
+                    " used as an i24 constant"
+                )),
             }
         }
     };
@@ -173,6 +177,12 @@ impl i24 {
     /// Safety: see `I24Repr::from_bits`
     const unsafe fn from_bits(bits: u32) -> i24 {
         Self(unsafe { I24Repr::from_bits(bits) })
+    }
+
+    /// same as `Self::from_bits` but always truncates
+    const fn from_bits_truncate(bits: u32) -> i24 {
+        // the most significant byte is zeroed out
+        Self(unsafe { I24Repr::from_bits(bits & I24Repr::BITS_MASK) })
     }
 
     /// Converts the 24-bit integer to a 32-bit signed integer.
@@ -225,7 +235,7 @@ impl i24 {
     pub const fn swap_bytes(self) -> Self {
         Self(self.0.swap_bytes())
     }
-    
+
     /// Converts self to little endian from the target's endianness.
     /// On little endian this is a no-op. On big endian the bytes are swapped.
     #[inline(always)]
@@ -239,7 +249,7 @@ impl i24 {
     pub const fn to_be(self) -> Self {
         Self(self.0.to_be())
     }
-    
+
     /// Return the memory representation of this integer as a byte array in native byte order.
     /// As the target platform's native endianness is used,
     /// portable code should use to_be_bytes or to_le_bytes, as appropriate, instead.
@@ -474,22 +484,25 @@ macro_rules! impl_bin_op {
 impl_bin_op! {
     impl Add = AddAssign add_assign {
         fn add(self, other) {
-            let result = self.to_i32().wrapping_add(other.to_i32());
-            Self::wrapping_from_i32(result)
+            // we use twos compliment and so signed and unsigned addition are strictly the same
+            // so no need to cast to an i32
+            Self::from_bits_truncate(self.to_bits().wrapping_add(other.to_bits()))
         }
     }
 
     impl Sub = SubAssign sub_assign {
         fn sub(self, other) {
-            let result = self.to_i32().wrapping_sub(other.to_i32());
-            Self::wrapping_from_i32(result)
+            // we use twos compliment and so signed and unsigned subtraction are strictly the same
+            // so no need to cast to an i32
+            Self::from_bits_truncate(self.to_bits().wrapping_sub(other.to_bits()))
         }
     }
 
     impl Mul = MulAssign mul_assign {
         fn mul(self, other) {
-            let result = self.to_i32().wrapping_mul(other.to_i32());
-            Self::wrapping_from_i32(result)
+            // we use twos compliment and so signed and unsigned non-widening multiplication are strictly the same
+            // so no need to cast to an i32
+            Self::from_bits_truncate(self.to_bits().wrapping_mul(other.to_bits()))
         }
     }
 
@@ -554,9 +567,7 @@ impl Not for i24 {
 
     #[inline(always)]
     fn not(self) -> Self {
-        let bits = (!self.to_bits()) & I24Repr::BITS_MASK;
-        // Safety: we only keep the bits that are not in the most significant byte
-        unsafe { i24::from_bits(bits) }
+        i24::from_bits_truncate(!self.to_bits())
     }
 }
 
@@ -669,6 +680,17 @@ mod i24_tests {
         assert_eq!((a * b).to_i32(), 5000);
         assert_eq!((a / b).to_i32(), 2);
         assert_eq!((a % b).to_i32(), 0);
+    }
+
+    #[test]
+    fn test_negative_operations() {
+        let a = i24_const!(100);
+        let b = i24_const!(-50);
+
+        assert_eq!((a + b).to_i32(), 50);
+        assert_eq!((a - b).to_i32(), 150);
+        assert_eq!((a * b).to_i32(), -5000);
+        assert_eq!((a / b).to_i32(), -2);
     }
 
     #[test]
