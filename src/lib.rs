@@ -189,8 +189,9 @@ impl i24 {
         Self(unsafe { I24Repr::from_bits(bits & I24Repr::BITS_MASK) })
     }
 
-    /// same as `Self::from_bits_truncate` but tells you if it truncates
-    const fn from_bits_no_overflow(bits: u32) -> Option<i24> {
+    /// same as `Self::from_bits` except checked at runtime
+    #[inline(always)]
+    const fn from_bits_checked(bits: u32) -> Option<i24> {
         #[inline(always)]
         pub const fn likely(b: bool) -> bool {
             // FIXME: if likely is made stable
@@ -345,7 +346,7 @@ impl i24 {
         // see Add::add
         self.to_bits()
             .checked_add(other.to_bits())
-            .and_then(Self::from_bits_no_overflow)
+            .and_then(Self::from_bits_checked)
     }
 
     /// Performs checked subtraction.
@@ -361,7 +362,7 @@ impl i24 {
         // see Sub::sub
         self.to_bits()
             .checked_sub(other.to_bits())
-            .and_then(Self::from_bits_no_overflow)
+            .and_then(Self::from_bits_checked)
     }
 
     /// Performs checked multiplication.
@@ -377,7 +378,7 @@ impl i24 {
         // see Mul::mul
         self.to_bits()
             .checked_mul(other.to_bits())
-            .and_then(Self::from_bits_no_overflow)
+            .and_then(Self::from_bits_checked)
     }
 
     /// Performs checked division.
