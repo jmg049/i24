@@ -2,7 +2,6 @@ use bytemuck::{NoUninit, Zeroable};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
-#[allow(dead_code)] // this is used to specify layout
 #[derive(Debug, Copy, Clone)]
 #[repr(u8)]
 enum ZeroByte {
