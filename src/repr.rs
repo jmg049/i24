@@ -49,11 +49,11 @@ unsafe impl NoUninit for I24Repr {}
 // Safety: I24Repr is laid out in memory as a `u32` with the most significant byte set to zero
 unsafe impl Zeroable for I24Repr {}
 
-#[cfg(all(target_endian = "little", target_endian = "big"))]
-compile_error!("Unknown endianness");
-
-#[cfg(not(any(target_endian = "little", target_endian = "big")))]
-compile_error!("Unknown endianness");
+#[cfg(any(
+    all(target_endian = "little", target_endian = "big"),
+    not(any(target_endian = "little", target_endian = "big"))
+))]
+compile_error!("unknown endianness");
 
 impl I24Repr {
     pub(super) const MAX: i32 = (1 << 23) - 1;
@@ -240,7 +240,7 @@ impl I24Repr {
         unsafe { std::mem::transmute::<&[I24Repr], &[u32]>(slice) }
     }
 
-    #[inline]
+    #[inline(always)]
     const fn const_eq(&self, other: &Self) -> bool {
         (*self.as_bits()) == (*other.as_bits())
     }
