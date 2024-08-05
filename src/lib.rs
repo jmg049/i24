@@ -165,24 +165,44 @@ impl i24 {
 
     /// The largest value that can be represented by this integer type (2<sup>23</sup> − 1).
     pub const MAX: i24 = i24_const!(I24Repr::MAX);
-
+    
+    #[inline(always)]
     const fn as_bits(&self) -> &u32 {
         self.0.as_bits()
     }
 
+    #[inline(always)]
     const fn to_bits(self) -> u32 {
         self.0.to_bits()
     }
 
     /// Safety: see `I24Repr::from_bits`
+    #[inline(always)]
     const unsafe fn from_bits(bits: u32) -> i24 {
         Self(unsafe { I24Repr::from_bits(bits) })
     }
 
     /// same as `Self::from_bits` but always truncates
+    #[inline(always)]
     const fn from_bits_truncate(bits: u32) -> i24 {
         // the most significant byte is zeroed out
         Self(unsafe { I24Repr::from_bits(bits & I24Repr::BITS_MASK) })
+    }
+
+    /// same as `Self::from_bits_truncate` but tells you if it truncates
+    const fn from_bits_no_overflow(bits: u32) -> Option<i24> {
+        #[inline(always)]
+        pub const fn likely(b: bool) -> bool {
+            // FIXME: if likely is made stable
+            1u8.checked_div(if b { 1 } else { 0 }).is_some()
+        }
+        
+        // the most significant byte is zeroed out
+        if likely((bits & !I24Repr::BITS_MASK) == 0) {
+            Some(Self(unsafe { I24Repr::from_bits(bits) }))
+        } else {
+            None
+        }
     }
 
     /// Converts the 24-bit integer to a 32-bit signed integer.
@@ -322,9 +342,10 @@ impl i24 {
     ///
     /// `Some(i24)` if the addition was successful, or `None` if it would overflow.
     pub fn checked_add(self, other: Self) -> Option<Self> {
-        self.to_i32()
-            .checked_add(other.to_i32())
-            .and_then(Self::from_i32)
+        // see Add::add
+        self.to_bits()
+            .checked_add(other.to_bits())
+            .and_then(Self::from_bits_no_overflow)
     }
 
     /// Performs checked subtraction.
@@ -337,9 +358,10 @@ impl i24 {
     ///
     /// `Some(i24)` if the subtraction was successful, or `None` if it would overflow.
     pub fn checked_sub(self, other: Self) -> Option<Self> {
-        self.to_i32()
-            .checked_sub(other.to_i32())
-            .and_then(Self::from_i32)
+        // see Sub::sub
+        self.to_bits()
+            .checked_sub(other.to_bits())
+            .and_then(Self::from_bits_no_overflow)
     }
 
     /// Performs checked multiplication.
@@ -352,9 +374,10 @@ impl i24 {
     ///
     /// `Some(i24)` if the multiplication was successful, or `None` if it would overflow.
     pub fn checked_mul(self, other: Self) -> Option<Self> {
-        self.to_i32()
-            .checked_mul(other.to_i32())
-            .and_then(Self::from_i32)
+        // see Mul::mul
+        self.to_bits()
+            .checked_mul(other.to_bits())
+            .and_then(Self::from_bits_no_overflow)
     }
 
     /// Performs checked division.
@@ -400,12 +423,12 @@ impl One for i24 {
 }
 
 impl Zero for i24 {
-    #[inline]
+    #[inline(always)]
     fn zero() -> Self {
         Self::zeroed()
     }
 
-    #[inline]
+    #[inline(always)]
     fn is_zero(&self) -> bool {
         Self::zeroed() == *self
     }
