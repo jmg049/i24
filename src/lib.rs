@@ -557,8 +557,8 @@ impl Neg for i24 {
 
     #[inline(always)]
     fn neg(self) -> Self {
-        let i32_result = self.to_i32().wrapping_neg();
-        i24::wrapping_from_i32(i32_result)
+        // this is how you negate twos compliment numbers
+        i24::from_bits_truncate((!self.to_bits()) + 1)
     }
 }
 
@@ -576,12 +576,7 @@ impl Shl<u32> for i24 {
 
     #[inline(always)]
     fn shl(self, rhs: u32) -> Self::Output {
-        let result = (self.to_i32() << rhs) as u32 & I24Repr::BITS_MASK;
-        if result & I24Repr::SIGN_BIT != 0 {
-            Self::wrapping_from_i32((result | I24Repr::SIGN_EXTEND) as i32)
-        } else {
-            Self::wrapping_from_i32(result as i32)
-        }
+        Self::from_bits_truncate(self.to_bits() << rhs)
     }
 }
 
@@ -590,13 +585,19 @@ impl Shr<u32> for i24 {
 
     #[inline(always)]
     fn shr(self, rhs: u32) -> Self::Output {
-        let value = self.to_i32();
-        let result = if value < 0 {
-            ((value >> rhs) | (-1 << (Self::BITS - rhs))) & I24Repr::BITS_MASK as i32
-        } else {
-            (value >> rhs) & I24Repr::BITS_MASK as i32
-        };
-        Self::wrapping_from_i32(result)
+        // Safety:
+        // we do a logical shift right by 8 at the end
+        // and so the most significant octet/byte is set to 0
+        
+        // logic:
+        // <8 bits empty> <i24 sign bit> <rest>
+        // we shift everything up by 8
+        // <i24 sign bit on i32 sign bit> <rest> <8 bits empty>
+        // then we do a sign shift
+        // <sign bit * n> <i24 sign bit> <rest> <8 - n bits empty>
+        // after we shift everything down by 8
+        // <8 bits empty> <sign bit * n> <sign bit> <first 23 - n bits of rest>
+        unsafe { Self::from_bits(((self.to_bits() << 8) as i32 >> rhs) as u32 >> 8) }
     }
 }
 
@@ -813,8 +814,11 @@ mod i24_tests {
         assert_eq!((c << 1).to_i32(), -2); // 0xFFFFFE in 24-bit, which is -2 when sign-extended
 
         // Edge case: minimum negative value
-        let d = i24_const!(-0x800000); // -8388608
-        assert_eq!((d >> 1).to_i32(), -4194304); // -0x400000
+        let d = i24::MIN; // (-0x800000)
+        assert_eq!((d >> 1).to_i32(), -0x400000);
+        assert_eq!((d >> 2).to_i32(), -0x200000);
+        assert_eq!((d >> 3).to_i32(), -0x100000);
+        assert_eq!((d >> 4).to_i32(), -0x080000);
 
         // Additional test for left shift wrapping
         assert_eq!((c << 1).to_i32(), -2); // 0xFFFFFE
