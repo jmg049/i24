@@ -28,13 +28,13 @@
 //! Then, in your Rust code:
 //!
 //! ```rust
-//! use i24::i24_const;
+//! use i24::i24;
 //!
-//! let a = i24_const!(1000);
-//! let b = i24_const!(2000);
+//! let a = i24!(1000);
+//! let b = i24!(2000);
 //! let c = a + b;
 //! assert_eq!(c.to_i32(), 3000);
-//! assert_eq!(c, i24_const!(3000));
+//! assert_eq!(c, i24!(3000));
 //! ```
 //!
 //! ## Safety and Limitations
@@ -140,8 +140,11 @@ unsafe impl Zeroable for i24 where I24Repr: Zeroable {}
 // Safety: repr(transparent) and so if I24Repr is NoUninit so should i24 be
 unsafe impl NoUninit for i24 where I24Repr: NoUninit {}
 
+
+/// creates an `i24` from a constant expression
+/// will give a compile error if the expression overflows an i24
 #[macro_export]
-macro_rules! i24_const {
+macro_rules! i24 {
     ($e: expr) => {
         const {
             match $crate::i24::from_i32($e) {
@@ -161,11 +164,11 @@ impl i24 {
     pub const BITS: u32 = 24;
 
     /// The smallest value that can be represented by this integer type (-2<sup>23</sup>)
-    pub const MIN: i24 = i24_const!(I24Repr::MIN);
+    pub const MIN: i24 = i24!(I24Repr::MIN);
 
     /// The largest value that can be represented by this integer type (2<sup>23</sup> − 1).
-    pub const MAX: i24 = i24_const!(I24Repr::MAX);
-    
+    pub const MAX: i24 = i24!(I24Repr::MAX);
+
     #[inline(always)]
     const fn as_bits(&self) -> &u32 {
         self.0.as_bits()
@@ -187,23 +190,6 @@ impl i24 {
     const fn from_bits_truncate(bits: u32) -> i24 {
         // the most significant byte is zeroed out
         Self(unsafe { I24Repr::from_bits(bits & I24Repr::BITS_MASK) })
-    }
-
-    /// same as `Self::from_bits` except checked at runtime
-    #[inline(always)]
-    const fn from_bits_checked(bits: u32) -> Option<i24> {
-        #[inline(always)]
-        pub const fn likely(b: bool) -> bool {
-            // FIXME: if likely is made stable
-            1u8.checked_div(if b { 1 } else { 0 }).is_some()
-        }
-        
-        // the most significant byte is zeroed out
-        if likely((bits & !I24Repr::BITS_MASK) == 0) {
-            Some(Self(unsafe { I24Repr::from_bits(bits) }))
-        } else {
-            None
-        }
     }
 
     /// Converts the 24-bit integer to a 32-bit signed integer.
@@ -343,10 +329,9 @@ impl i24 {
     ///
     /// `Some(i24)` if the addition was successful, or `None` if it would overflow.
     pub fn checked_add(self, other: Self) -> Option<Self> {
-        // see Add::add
-        self.to_bits()
-            .checked_add(other.to_bits())
-            .and_then(Self::from_bits_checked)
+        self.to_i32()
+            .checked_add(other.to_i32())
+            .and_then(Self::from_i32)
     }
 
     /// Performs checked subtraction.
@@ -359,10 +344,9 @@ impl i24 {
     ///
     /// `Some(i24)` if the subtraction was successful, or `None` if it would overflow.
     pub fn checked_sub(self, other: Self) -> Option<Self> {
-        // see Sub::sub
-        self.to_bits()
-            .checked_sub(other.to_bits())
-            .and_then(Self::from_bits_checked)
+        self.to_i32()
+            .checked_sub(other.to_i32())
+            .and_then(Self::from_i32)
     }
 
     /// Performs checked multiplication.
@@ -375,10 +359,9 @@ impl i24 {
     ///
     /// `Some(i24)` if the multiplication was successful, or `None` if it would overflow.
     pub fn checked_mul(self, other: Self) -> Option<Self> {
-        // see Mul::mul
-        self.to_bits()
-            .checked_mul(other.to_bits())
-            .and_then(Self::from_bits_checked)
+        self.to_i32()
+            .checked_mul(other.to_i32())
+            .and_then(Self::from_i32)
     }
 
     /// Performs checked division.
@@ -612,7 +595,7 @@ impl Shr<u32> for i24 {
         // Safety:
         // we do a logical shift right by 8 at the end
         // and so the most significant octet/byte is set to 0
-        
+
         // logic:
         // <8 bits empty> <i24 sign bit> <rest>
         // we shift everything up by 8
@@ -697,8 +680,8 @@ mod i24_tests {
 
     #[test]
     fn test_arithmetic_operations() {
-        let a = i24_const!(100);
-        let b = i24_const!(50);
+        let a = i24!(100);
+        let b = i24!(50);
 
         assert_eq!((a + b).to_i32(), 150);
         assert_eq!((a - b).to_i32(), 50);
@@ -709,8 +692,8 @@ mod i24_tests {
 
     #[test]
     fn test_negative_operations() {
-        let a = i24_const!(100);
-        let b = i24_const!(-50);
+        let a = i24!(100);
+        let b = i24!(-50);
 
         assert_eq!((a + b).to_i32(), 50);
         assert_eq!((a - b).to_i32(), 150);
@@ -720,8 +703,8 @@ mod i24_tests {
 
     #[test]
     fn test_bitwise_operations() {
-        let a = i24_const!(0b101010);
-        let b = i24_const!(0b110011);
+        let a = i24!(0b101010);
+        let b = i24!(0b110011);
 
         assert_eq!((a & b).to_i32(), 0b100010);
         assert_eq!((a | b).to_i32(), 0b111011);
@@ -731,8 +714,45 @@ mod i24_tests {
     }
 
     #[test]
+    fn test_checked_addition() {
+        assert_eq!(i24!(10).checked_add(i24!(20)), Some(i24!(30)));
+        assert_eq!(i24!(10).checked_add(i24!(-20)), Some(i24!(-10)));
+        // Overflow cases
+        assert_eq!(i24::MAX.checked_add(i24::one()), None);
+        assert_eq!((i24::MAX - i24::one()).checked_add(i24::one() * i24!(2)), None);
+    }
+
+    #[test]
+    fn test_checked_subtraction() {
+        assert_eq!(i24!(10).checked_sub(i24!(20)), Some(i24!(-10)));
+        assert_eq!(i24!(10).checked_sub(i24!(-20)), Some(i24!(30)));
+        
+        // Overflow cases
+        assert_eq!(i24::MIN.checked_sub(i24::one()), None);
+        assert_eq!((i24::MIN + i24::one()).checked_sub(i24::one() * i24!(2)), None);
+    }
+
+    #[test]
+    fn test_checked_division() {
+        assert_eq!(i24!(20).checked_div(i24!(5)), Some(i24!(4)));
+        assert_eq!(i24!(20).checked_div(i24!(0)), None);
+    }
+    
+    #[test]
+    fn test_checked_multiplication() {
+        assert_eq!(i24!(5).checked_mul(i24!(6)), Some(i24!(30)));
+        assert_eq!(i24::MAX.checked_mul(i24!(2)), None);
+    }
+    
+    #[test]
+    fn test_checked_remainder() {
+        assert_eq!(i24!(20).checked_rem(i24!(5)), Some(i24!(0)));
+        assert_eq!(i24!(20).checked_rem(i24!(0)), None);
+    }
+    
+    #[test]
     fn test_unary_operations() {
-        let a = i24_const!(100);
+        let a = i24!(100);
 
         assert_eq!((-a).to_i32(), -100);
         assert_eq!((!a).to_i32(), -101);
@@ -740,9 +760,9 @@ mod i24_tests {
 
     #[test]
     fn test_from_i32() {
-        assert_eq!(i24_const!(0).to_i32(), 0);
-        assert_eq!(i24_const!(8388607).to_i32(), 8388607); // Max positive value
-        assert_eq!(i24_const!(-8388608).to_i32(), -8388608); // Min negative value
+        assert_eq!(i24!(0).to_i32(), 0);
+        assert_eq!(i24!(8388607).to_i32(), 8388607); // Max positive value
+        assert_eq!(i24!(-8388608).to_i32(), -8388608); // Min negative value
     }
 
     #[test]
@@ -790,8 +810,8 @@ mod i24_tests {
 
     #[test]
     fn test_display() {
-        assert_eq!(format!("{}", i24_const!(100)), "100");
-        assert_eq!(format!("{}", i24_const!(-100)), "-100");
+        assert_eq!(format!("{}", i24!(100)), "100");
+        assert_eq!(format!("{}", i24!(-100)), "-100");
     }
 
     #[test]
@@ -821,20 +841,20 @@ mod i24_tests {
 
     #[test]
     fn test_shift_operations() {
-        let a = i24_const!(0b1);
+        let a = i24!(0b1);
 
         // Left shift
         assert_eq!((a << 23).to_i32(), -8388608); // 0x800000, which is the minimum negative value
         assert_eq!((a << 24).to_i32(), 0); // Shifts out all bits
 
         // Right shift
-        let b = i24_const!(-1); // All bits set
+        let b = i24!(-1); // All bits set
         assert_eq!((b >> 1).to_i32(), -1); // Sign extension
         assert_eq!((b >> 23).to_i32(), -1); // Still all bits set due to sign extension
         assert_eq!((b >> 24).to_i32(), -1); // No change after 23 bits
 
         // Edge case: maximum positive value
-        let c = i24_const!(0x7FFFFF); // 8388607
+        let c = i24!(0x7FFFFF); // 8388607
         assert_eq!((c << 1).to_i32(), -2); // 0xFFFFFE in 24-bit, which is -2 when sign-extended
 
         // Edge case: minimum negative value
