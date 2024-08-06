@@ -677,11 +677,11 @@ mod i24_tests {
         let a = i24!(100);
         let b = i24!(50);
 
-        assert_eq!((a + b).to_i32(), 150);
-        assert_eq!((a - b).to_i32(), 50);
-        assert_eq!((a * b).to_i32(), 5000);
-        assert_eq!((a / b).to_i32(), 2);
-        assert_eq!((a % b).to_i32(), 0);
+        assert_eq!(a + b, i24!(150));
+        assert_eq!(a - b, i24!(50));
+        assert_eq!(a * b, i24!(5000));
+        assert_eq!(a / b, i24!(2));
+        assert_eq!(a % b, i24!(0));
     }
 
     #[test]
@@ -689,10 +689,10 @@ mod i24_tests {
         let a = i24!(100);
         let b = i24!(-50);
 
-        assert_eq!((a + b).to_i32(), 50);
-        assert_eq!((a - b).to_i32(), 150);
-        assert_eq!((a * b).to_i32(), -5000);
-        assert_eq!((a / b).to_i32(), -2);
+        assert_eq!(a + b, i24!(50));
+        assert_eq!(a - b, i24!(150));
+        assert_eq!(a * b, i24!(-5000));
+        assert_eq!(a / b, i24!(-2));
     }
 
     #[test]
@@ -700,11 +700,11 @@ mod i24_tests {
         let a = i24!(0b101010);
         let b = i24!(0b110011);
 
-        assert_eq!((a & b).to_i32(), 0b100010);
-        assert_eq!((a | b).to_i32(), 0b111011);
-        assert_eq!((a ^ b).to_i32(), 0b011001);
-        assert_eq!((a << 2).to_i32(), 0b10101000);
-        assert_eq!((a >> 2).to_i32(), 0b1010);
+        assert_eq!(a & b, i24!(0b100010));
+        assert_eq!(a | b, i24!(0b111011));
+        assert_eq!(a ^ b, i24!(0b011001));
+        assert_eq!(a << 2, i24!(0b10101000));
+        assert_eq!(a >> 2, i24!(0b1010));
     }
 
     #[test]
@@ -754,42 +754,36 @@ mod i24_tests {
     fn test_unary_operations() {
         let a = i24!(100);
 
-        assert_eq!((-a).to_i32(), -100);
-        assert_eq!((!a).to_i32(), -101);
+        assert_eq!(-a, i24!(-100));
+        assert_eq!(!a, i24!(-101));
     }
 
     #[test]
     fn test_from_bytes() {
-        assert_eq!(i24::from_ne_bytes([0x01, 0x02, 0x03]).to_i32(), 0x030201);
-        assert_eq!(i24::from_le_bytes([0x01, 0x02, 0x03]).to_i32(), 0x030201);
-        assert_eq!(i24::from_be_bytes([0x01, 0x02, 0x03]).to_i32(), 0x010203);
-    }
-
-    #[test]
-    fn test_to_i32() {
-        let a = i24::from_ne_bytes([0xFF, 0xFF, 0x7F]);
-        assert_eq!(a.to_i32(), 8388607); // Max positive value
-
-        let b = i24::from_le_bytes([0x00, 0x00, 0x80]);
-        assert_eq!(b.to_i32(), -8388608); // Min negative value
+        let le = i24!(0x030201);
+        let be = i24!(0x010203);
+        assert_eq!(i24::from_ne_bytes([0x01, 0x02, 0x03]), if cfg!(target_endian = "big") { be } else { le });
+        assert_eq!(i24::from_le_bytes([0x01, 0x02, 0x03]), le);
+        assert_eq!(i24::from_be_bytes([0x01, 0x02, 0x03]), be);
     }
 
     #[test]
     fn test_zero_and_one() {
-        assert_eq!(i24::zero().to_i32(), 0);
-        assert_eq!(i24::one().to_i32(), 1);
+        assert_eq!(i24::zero(), i24!(0));
+        assert_eq!(i24::one(), i24!(1));
     }
+    
     #[test]
     fn test_from_str() {
-        assert_eq!(i24::from_str("100").unwrap().to_i32(), 100);
-        assert_eq!(i24::from_str("-100").unwrap().to_i32(), -100);
+        assert_eq!(i24::from_str("100").unwrap(), i24!(100));
+        assert_eq!(i24::from_str("-100").unwrap(), i24!(-100));
         assert_eq!(
-            i24::from_str(&format!("{}", i24::MAX)).unwrap().to_i32(),
-            i24::MAX.to_i32()
+            i24::from_str(&format!("{}", i24::MAX)).unwrap(),
+            i24::MAX
         );
         assert_eq!(
-            i24::from_str(&format!("{}", i24::MIN)).unwrap().to_i32(),
-            i24::MIN.to_i32()
+            i24::from_str(&format!("{}", i24::MIN)).unwrap(),
+            i24::MIN
         );
         assert_eq!(
             i24::from_str("8388608").unwrap_err(),
