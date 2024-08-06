@@ -816,7 +816,7 @@ mod i24_tests {
     fn discriminant_optimization() {
         // this isn't guaranteed by rustc, but this should still hold true
         // if this fails because rustc stops doing it, just remove this test
-        // otherwise check why this isn't working
+        // otherwise investigate why this isn't working
         assert_eq!(size_of::<i24>(), size_of::<Option<i24>>());
         assert_eq!(size_of::<i24>(), size_of::<Option<Option<i24>>>());
         assert_eq!(size_of::<i24>(), size_of::<Option<Option<Option<i24>>>>());
@@ -861,6 +861,13 @@ mod i24_tests {
     fn test_to_from_i32() {
         for i in I24Repr::MIN..=I24Repr::MAX {
             assert_eq!(i24::from_i32(i).unwrap().to_i32(), i)
+        }
+    }
+
+    #[test]
+    fn test_to_from_bits() {
+        for i in 0..(1 << 24) {
+            assert_eq!(i24::from_bits_truncate(i).to_bits(), i)
         }
     }
 }
