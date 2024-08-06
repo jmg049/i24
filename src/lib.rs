@@ -396,12 +396,7 @@ impl i24 {
 
 impl One for i24 {
     fn one() -> Self {
-        const {
-            match i24::from_i32(1) {
-                Some(x) => x,
-                None => unreachable!(),
-            }
-        }
+        i24!(1)
     }
 }
 
