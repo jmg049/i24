@@ -865,7 +865,7 @@ mod i24_tests {
     
     #[test]
     fn test_to_from_i32() {
-        for i in I24Repr::MIN..I24Repr::MAX {
+        for i in I24Repr::MIN..=I24Repr::MAX {
             assert_eq!(i24::from_i32(i).unwrap().to_i32(), i)
         }
     }
