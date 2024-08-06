@@ -140,7 +140,6 @@ unsafe impl Zeroable for i24 where I24Repr: Zeroable {}
 // Safety: repr(transparent) and so if I24Repr is NoUninit so should i24 be
 unsafe impl NoUninit for i24 where I24Repr: NoUninit {}
 
-
 /// creates an `i24` from a constant expression
 /// will give a compile error if the expression overflows an i24
 #[macro_export]
@@ -719,17 +718,23 @@ mod i24_tests {
         assert_eq!(i24!(10).checked_add(i24!(-20)), Some(i24!(-10)));
         // Overflow cases
         assert_eq!(i24::MAX.checked_add(i24::one()), None);
-        assert_eq!((i24::MAX - i24::one()).checked_add(i24::one() * i24!(2)), None);
+        assert_eq!(
+            (i24::MAX - i24::one()).checked_add(i24::one() * i24!(2)),
+            None
+        );
     }
 
     #[test]
     fn test_checked_subtraction() {
         assert_eq!(i24!(10).checked_sub(i24!(20)), Some(i24!(-10)));
         assert_eq!(i24!(10).checked_sub(i24!(-20)), Some(i24!(30)));
-        
+
         // Overflow cases
         assert_eq!(i24::MIN.checked_sub(i24::one()), None);
-        assert_eq!((i24::MIN + i24::one()).checked_sub(i24::one() * i24!(2)), None);
+        assert_eq!(
+            (i24::MIN + i24::one()).checked_sub(i24::one() * i24!(2)),
+            None
+        );
     }
 
     #[test]
@@ -737,19 +742,19 @@ mod i24_tests {
         assert_eq!(i24!(20).checked_div(i24!(5)), Some(i24!(4)));
         assert_eq!(i24!(20).checked_div(i24!(0)), None);
     }
-    
+
     #[test]
     fn test_checked_multiplication() {
         assert_eq!(i24!(5).checked_mul(i24!(6)), Some(i24!(30)));
         assert_eq!(i24::MAX.checked_mul(i24!(2)), None);
     }
-    
+
     #[test]
     fn test_checked_remainder() {
         assert_eq!(i24!(20).checked_rem(i24!(5)), Some(i24!(0)));
         assert_eq!(i24!(20).checked_rem(i24!(0)), None);
     }
-    
+
     #[test]
     fn test_unary_operations() {
         let a = i24!(100);

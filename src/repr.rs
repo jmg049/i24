@@ -35,7 +35,7 @@ pub(super) struct LittleEndianI24Repr {
 }
 
 #[cfg(target_endian = "big")]
-type I24Repr = BigEndianI24Repr;
+pub(super) type I24Repr = BigEndianI24Repr;
 
 #[cfg(target_endian = "little")]
 pub(super) type I24Repr = LittleEndianI24Repr;
