@@ -594,7 +594,7 @@ impl Shr<u32> for i24 {
         // <8 bits empty> <i24 sign bit> <rest>
         // we shift everything up by 8
         // <i24 sign bit on i32 sign bit> <rest> <8 bits empty>
-        // then we do a sign shift
+        // then we do an arithmetic shift
         // <sign bit * n> <i24 sign bit> <rest> <8 - n bits empty>
         // after we shift everything down by 8
         // <8 bits empty> <sign bit * n> <sign bit> <first 23 - n bits of rest>
@@ -759,13 +759,6 @@ mod i24_tests {
     }
 
     #[test]
-    fn test_from_i32() {
-        assert_eq!(i24!(0).to_i32(), 0);
-        assert_eq!(i24!(8388607).to_i32(), 8388607); // Max positive value
-        assert_eq!(i24!(-8388608).to_i32(), -8388608); // Min negative value
-    }
-
-    #[test]
     fn test_from_bytes() {
         assert_eq!(i24::from_ne_bytes([0x01, 0x02, 0x03]).to_i32(), 0x030201);
         assert_eq!(i24::from_le_bytes([0x01, 0x02, 0x03]).to_i32(), 0x030201);
@@ -844,29 +837,36 @@ mod i24_tests {
         let a = i24!(0b1);
 
         // Left shift
-        assert_eq!((a << 23).to_i32(), -8388608); // 0x800000, which is the minimum negative value
-        assert_eq!((a << 24).to_i32(), 0); // Shifts out all bits
+        assert_eq!(a << 23, i24::MIN); // 0x800000, which is the minimum negative value
+        assert_eq!(a << 24, i24::zero()); // Shifts out all bits
 
         // Right shift
         let b = i24!(-1); // All bits set
-        assert_eq!((b >> 1).to_i32(), -1); // Sign extension
-        assert_eq!((b >> 23).to_i32(), -1); // Still all bits set due to sign extension
-        assert_eq!((b >> 24).to_i32(), -1); // No change after 23 bits
+        assert_eq!(b >> 1, i24!(-1)); // Sign extension
+        assert_eq!(b >> 23, i24!(-1)); // Still all bits set due to sign extension
+        assert_eq!(b >> 24, i24!(-1)); // No change after 23 bits
 
         // Edge case: maximum positive value
         let c = i24!(0x7FFFFF); // 8388607
-        assert_eq!((c << 1).to_i32(), -2); // 0xFFFFFE in 24-bit, which is -2 when sign-extended
+        assert_eq!(c << 1, i24!(-2)); // 0xFFFFFE in 24-bit, which is -2 when sign-extended
 
         // Edge case: minimum negative value
         let d = i24::MIN; // (-0x800000)
-        assert_eq!((d >> 1).to_i32(), -0x400000);
-        assert_eq!((d >> 2).to_i32(), -0x200000);
-        assert_eq!((d >> 3).to_i32(), -0x100000);
-        assert_eq!((d >> 4).to_i32(), -0x080000);
+        assert_eq!(d >> 1, i24!(-0x400000));
+        assert_eq!(d >> 2, i24!(-0x200000));
+        assert_eq!(d >> 3, i24!(-0x100000));
+        assert_eq!(d >> 4, i24!(-0x080000));
 
         // Additional test for left shift wrapping
-        assert_eq!((c << 1).to_i32(), -2); // 0xFFFFFE
-        assert_eq!((c << 2).to_i32(), -4); // 0xFFFFFC
-        assert_eq!((c << 3).to_i32(), -8); // 0xFFFFF8
+        assert_eq!(c << 1, i24!(-2)); // 0xFFFFFE
+        assert_eq!(c << 2, i24!(-4)); // 0xFFFFFC
+        assert_eq!(c << 3, i24!(-8)); // 0xFFFFF8
+    }
+    
+    #[test]
+    fn test_to_from_i32() {
+        for i in I24Repr::MIN..I24Repr::MAX {
+            assert_eq!(i24::from_i32(i).unwrap().to_i32(), i)
+        }
     }
 }
