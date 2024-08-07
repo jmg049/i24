@@ -22,7 +22,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! i24 = "1.0.1"
+//! i24 = "2.0.0"
 //! ```
 //!
 //! Then, in your Rust code:
@@ -30,10 +30,11 @@
 //! ```rust
 //! use i24::i24;
 //!
-//! let a = i24::from_i32(1000);
-//! let b = i24::from_i32(2000);
+//! let a = i24!(1000);
+//! let b = i24!(2000);
 //! let c = a + b;
 //! assert_eq!(c.to_i32(), 3000);
+//! assert_eq!(c, i24!(3000));
 //! ```
 //!
 //! ## Safety and Limitations
@@ -58,11 +59,13 @@
 //! ## License
 //!
 //! This project is licensed under MIT - see the [LICENSE](https://github.com/jmg049/i24/blob/main/LICENSE) file for details.
-//!
-use bytemuck::{Pod, Zeroable};
+
+use crate::repr::I24Repr;
+use bytemuck::{NoUninit, Zeroable};
 use num_traits::{Num, One, Zero};
 use std::fmt;
-use std::fmt::Display;
+use std::fmt::{Debug, Display, LowerHex, Octal, UpperHex};
+use std::hash::{Hash, Hasher};
 use std::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
     Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
@@ -77,7 +80,7 @@ use pyo3::prelude::*;
 
 /// Represents errors that can occur when working with the `i24` type.
 #[derive(Debug, PartialEq, Eq)]
-pub enum I24Error {
+pub enum ParseI24Error {
     /// An error occurred while parsing a string to an `i24`.
     ///
     /// This variant wraps the standard library's `ParseIntError`.
@@ -89,37 +92,38 @@ pub enum I24Error {
     OutOfRange,
 }
 
-impl std::fmt::Display for I24Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for ParseI24Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            I24Error::ParseError(e) => write!(f, "Parse error: {}", e),
-            I24Error::OutOfRange => write!(f, "Value out of range for i24"),
+            ParseI24Error::ParseError(e) => write!(f, "Parse error: {}", e),
+            ParseI24Error::OutOfRange => write!(f, "Value out of range for i24"),
         }
     }
 }
 
-impl std::error::Error for I24Error {
+impl std::error::Error for ParseI24Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            I24Error::ParseError(e) => Some(e),
-            I24Error::OutOfRange => None,
+            ParseI24Error::ParseError(e) => Some(e),
+            ParseI24Error::OutOfRange => None,
         }
     }
 }
 
-impl From<std::num::ParseIntError> for I24Error {
+impl From<std::num::ParseIntError> for ParseI24Error {
     fn from(err: std::num::ParseIntError) -> Self {
-        I24Error::ParseError(err)
+        ParseI24Error::ParseError(err)
     }
 }
 
+mod repr;
+
 #[allow(non_camel_case_types)]
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[repr(transparent)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 #[cfg_attr(feature = "pyo3", pyclass)]
 /// An experimental 24-bit signed integer type.
 ///
-/// This type is a wrapper around ``[u8; 3]`` and is used to represent 24-bit audio samples.
 /// It should not be used anywhere important. It is still unverified and experimental.
 ///
 /// The type is not yet fully implemented and is not guaranteed to work.
@@ -127,13 +131,66 @@ impl From<std::num::ParseIntError> for I24Error {
 ///
 /// Represents a 24-bit signed integer.
 ///
-/// This struct stores the integer as three bytes in little-endian order.
-pub struct i24 {
-    /// The raw byte representation of the 24-bit integer.
-    pub data: [u8; 3],
+/// This structs layout is an unspecified implementation detail
+pub struct i24(I24Repr);
+
+// Safety: repr(transparent) and so if I24Repr is Zeroable so should i24 be
+unsafe impl Zeroable for i24 where I24Repr: Zeroable {}
+
+// Safety: repr(transparent) and so if I24Repr is NoUninit so should i24 be
+unsafe impl NoUninit for i24 where I24Repr: NoUninit {}
+
+/// creates an `i24` from a constant expression
+/// will give a compile error if the expression overflows an i24
+#[macro_export]
+macro_rules! i24 {
+    ($e: expr) => {
+        const {
+            match $crate::i24::from_i32($e) {
+                Some(x) => x,
+                None => panic!(concat!(
+                    "out of range value ",
+                    stringify!($e),
+                    " used as an i24 constant"
+                )),
+            }
+        }
+    };
 }
 
 impl i24 {
+    /// The size of this integer type in bits
+    pub const BITS: u32 = 24;
+
+    /// The smallest value that can be represented by this integer type (-2<sup>23</sup>)
+    pub const MIN: i24 = i24!(I24Repr::MIN);
+
+    /// The largest value that can be represented by this integer type (2<sup>23</sup> − 1).
+    pub const MAX: i24 = i24!(I24Repr::MAX);
+
+    #[inline(always)]
+    const fn as_bits(&self) -> &u32 {
+        self.0.as_bits()
+    }
+
+    #[inline(always)]
+    const fn to_bits(self) -> u32 {
+        self.0.to_bits()
+    }
+
+    /// Safety: see `I24Repr::from_bits`
+    #[inline(always)]
+    const unsafe fn from_bits(bits: u32) -> i24 {
+        Self(unsafe { I24Repr::from_bits(bits) })
+    }
+
+    /// same as `Self::from_bits` but always truncates
+    #[inline(always)]
+    const fn from_bits_truncate(bits: u32) -> i24 {
+        // the most significant byte is zeroed out
+        Self(unsafe { I24Repr::from_bits(bits & I24Repr::BITS_MASK) })
+    }
+
     /// Converts the 24-bit integer to a 32-bit signed integer.
     ///
     /// This method performs sign extension if the 24-bit integer is negative.
@@ -141,13 +198,25 @@ impl i24 {
     /// # Returns
     ///
     /// The 32-bit signed integer representation of this `i24`.
+    #[inline(always)]
     pub const fn to_i32(self) -> i32 {
-        let [a, b, c] = self.data;
-        let value = i32::from_le_bytes([a, b, c, 0]);
-        if value & 0x800000 != 0 {
-            value | -0x1000000 // This is equivalent to 0xFF000000 but avoids the literal issue
-        } else {
-            value
+        self.0.to_i32()
+    }
+
+    /// Creates an `i24` from a 32-bit signed integer.
+    ///
+    /// # Arguments
+    ///
+    /// * `n` - The 32-bit signed integer to convert.
+    ///
+    /// # Returns
+    ///
+    /// Some(i24) if n is in the valid range
+    #[inline(always)]
+    pub const fn from_i32(n: i32) -> Option<Self> {
+        match I24Repr::from_i32(n) {
+            Some(inner) => Some(Self(inner)),
+            None => None,
         }
     }
 
@@ -162,14 +231,52 @@ impl i24 {
     /// # Returns
     ///
     /// An `i24` instance representing the input value.
-    pub const fn from_i32(n: i32) -> Self {
-        let bytes = n.to_le_bytes();
-        Self {
-            data: [bytes[0], bytes[1], bytes[2]],
-        }
+    #[inline(always)]
+    pub const fn wrapping_from_i32(n: i32) -> Self {
+        Self(I24Repr::wrapping_from_i32(n))
     }
 
-    /// Creates an `i24` from three bytes in native endian order.
+    /// Reverses the byte order of the integer.
+    #[inline(always)]
+    pub const fn swap_bytes(self) -> Self {
+        Self(self.0.swap_bytes())
+    }
+
+    /// Converts self to little endian from the target's endianness.
+    /// On little endian this is a no-op. On big endian the bytes are swapped.
+    #[inline(always)]
+    pub const fn to_le(self) -> Self {
+        Self(self.0.to_le())
+    }
+
+    /// Converts self to big endian from the target's endianness.
+    /// On big endian this is a no-op. On little endian the bytes are swapped.
+    #[inline(always)]
+    pub const fn to_be(self) -> Self {
+        Self(self.0.to_be())
+    }
+
+    /// Return the memory representation of this integer as a byte array in native byte order.
+    /// As the target platform's native endianness is used,
+    /// portable code should use to_be_bytes or to_le_bytes, as appropriate, instead.
+    #[inline(always)]
+    pub const fn to_ne_bytes(self) -> [u8; 3] {
+        self.0.to_ne_bytes()
+    }
+
+    /// Create a native endian integer value from its representation as a byte array in little endian.
+    #[inline(always)]
+    pub const fn to_le_bytes(self) -> [u8; 3] {
+        self.0.to_le_bytes()
+    }
+
+    /// Return the memory representation of this integer as a byte array in big-endian (network) byte order.
+    #[inline(always)]
+    pub const fn to_be_bytes(self) -> [u8; 3] {
+        self.0.to_be_bytes()
+    }
+
+    /// Creates an `i24` from three bytes in **native endian** order.
     ///
     /// # Arguments
     ///
@@ -178,8 +285,9 @@ impl i24 {
     /// # Returns
     ///
     /// An `i24` instance containing the input bytes.
+    #[inline(always)]
     pub const fn from_ne_bytes(bytes: [u8; 3]) -> Self {
-        Self { data: bytes }
+        Self(I24Repr::from_ne_bytes(bytes))
     }
 
     /// Creates an `i24` from three bytes in **little-endian** order.
@@ -191,11 +299,12 @@ impl i24 {
     /// # Returns
     ///
     /// An `i24` instance containing the input bytes.
+    #[inline(always)]
     pub const fn from_le_bytes(bytes: [u8; 3]) -> Self {
-        Self { data: bytes }
+        Self(I24Repr::from_le_bytes(bytes))
     }
 
-    /// Creates an `i24` from three bytes in big-endian order.
+    /// Creates an `i24` from three bytes in **big-endian** order.
     ///
     /// # Arguments
     ///
@@ -204,10 +313,9 @@ impl i24 {
     /// # Returns
     ///
     /// An `i24` instance with the bytes in little-endian order.
+    #[inline(always)]
     pub const fn from_be_bytes(bytes: [u8; 3]) -> Self {
-        Self {
-            data: [bytes[2], bytes[1], bytes[0]],
-        }
+        Self(I24Repr::from_be_bytes(bytes))
     }
 
     /// Performs checked addition.
@@ -222,7 +330,7 @@ impl i24 {
     pub fn checked_add(self, other: Self) -> Option<Self> {
         self.to_i32()
             .checked_add(other.to_i32())
-            .map(Self::from_i32)
+            .and_then(Self::from_i32)
     }
 
     /// Performs checked subtraction.
@@ -237,7 +345,7 @@ impl i24 {
     pub fn checked_sub(self, other: Self) -> Option<Self> {
         self.to_i32()
             .checked_sub(other.to_i32())
-            .map(Self::from_i32)
+            .and_then(Self::from_i32)
     }
 
     /// Performs checked multiplication.
@@ -252,7 +360,7 @@ impl i24 {
     pub fn checked_mul(self, other: Self) -> Option<Self> {
         self.to_i32()
             .checked_mul(other.to_i32())
-            .map(Self::from_i32)
+            .and_then(Self::from_i32)
     }
 
     /// Performs checked division.
@@ -267,46 +375,68 @@ impl i24 {
     pub fn checked_div(self, other: Self) -> Option<Self> {
         self.to_i32()
             .checked_div(other.to_i32())
-            .map(Self::from_i32)
+            .and_then(Self::from_i32)
+    }
+
+    /// Performs checked integer remainder.
+    ///
+    /// # Arguments
+    ///
+    /// * `other` - The `i24` to divide this value by.
+    ///
+    /// # Returns
+    ///
+    /// `Some(i24)` if the remainder operation was successful, or `None` if the divisor is zero or if the division would overflow.
+    pub fn checked_rem(self, other: Self) -> Option<Self> {
+        self.to_i32()
+            .checked_rem(other.to_i32())
+            .and_then(Self::from_i32)
     }
 }
 
-unsafe impl Zeroable for i24 {}
-unsafe impl Pod for i24 {}
-
 impl One for i24 {
     fn one() -> Self {
-        i24::from_i32(1)
+        i24!(1)
     }
 }
 
 impl Zero for i24 {
+    #[inline(always)]
     fn zero() -> Self {
-        i24::from_i32(0)
+        Self::zeroed()
     }
 
+    #[inline(always)]
     fn is_zero(&self) -> bool {
-        i24::from_i32(0) == *self
+        Self::zeroed() == *self
     }
+}
+
+macro_rules! from_str {
+    ($meth: ident($($args: tt)*)) => {
+        i32::$meth($($args)*)
+            .map_err(ParseI24Error::ParseError)
+            .and_then(|x| i24::from_i32(x).ok_or(ParseI24Error::OutOfRange))
+    };
 }
 
 impl Num for i24 {
-    type FromStrRadixErr = I24Error;
+    type FromStrRadixErr = ParseI24Error;
     fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
-        let i32_result = i32::from_str_radix(str, radix).map_err(I24Error::ParseError)?;
-        if i32_result < -8388608 || i32_result > 8388607 {
-            Err(I24Error::OutOfRange)
-        } else {
-            Ok(i24::from_i32(i32_result))
-        }
+        from_str!(from_str_radix(str, radix))
+    }
+}
+
+impl FromStr for i24 {
+    type Err = ParseI24Error;
+
+    fn from_str(str: &str) -> Result<Self, Self::Err> {
+        from_str!(from_str(str))
     }
 }
 
 #[cfg(feature = "pyo3")]
-use numpy::Element;
-
-#[cfg(feature = "pyo3")]
-unsafe impl Element for i24 {
+unsafe impl numpy::Element for i24 {
     const IS_COPY: bool = true;
 
     fn get_dtype_bound(py: Python<'_>) -> Bound<'_, numpy::PyArrayDescr> {
@@ -314,199 +444,229 @@ unsafe impl Element for i24 {
     }
 }
 
-impl Add for i24 {
-    type Output = Self;
+macro_rules! impl_bin_op {
+    ($(impl $op: ident = $assign: ident $assign_fn: ident { $($impl: tt)* })+) => {$(
+        impl_bin_op!(impl $op = $assign $assign_fn for i24 { $($impl)* });
+        impl_bin_op!(impl $op = $assign $assign_fn for &i24 { $($impl)* });
+    )+};
 
-    fn add(self, other: Self) -> Self {
-        let result = self.to_i32().wrapping_add(other.to_i32());
-        Self::from_i32(result)
-    }
+    (impl $op: ident = $assign: ident $assign_fn: ident for $ty:ty {
+         fn $meth: ident($self: tt, $other: ident) {
+            $($impl: tt)*
+         }
+    }) => {
+        impl $op<$ty> for i24 {
+            type Output = Self;
+
+            #[inline(always)]
+            fn $meth($self, $other: $ty) -> Self {
+                $($impl)*
+            }
+        }
+
+        impl $op<$ty> for &i24 {
+            type Output = i24;
+
+            #[inline(always)]
+            fn $meth(self, other: $ty) -> i24 {
+                <i24 as $op<$ty>>::$meth(*self, other)
+            }
+        }
+
+        impl $assign<$ty> for i24 {
+            #[inline(always)]
+            fn $assign_fn(&mut self, rhs: $ty) {
+                *self = $op::$meth(*self, rhs)
+            }
+        }
+    };
 }
 
-impl Sub for i24 {
-    type Output = Self;
-
-    fn sub(self, other: Self) -> Self {
-        let result = self.to_i32().wrapping_sub(other.to_i32());
-        Self::from_i32(result)
+impl_bin_op! {
+    impl Add = AddAssign add_assign {
+        fn add(self, other) {
+            // we use twos compliment and so signed and unsigned addition are strictly the same
+            // so no need to cast to an i32
+            Self::from_bits_truncate(self.to_bits().wrapping_add(other.to_bits()))
+        }
     }
-}
 
-impl Mul for i24 {
-    type Output = Self;
-
-    fn mul(self, other: Self) -> Self {
-        let result = self.to_i32().wrapping_mul(other.to_i32());
-        Self::from_i32(result)
+    impl Sub = SubAssign sub_assign {
+        fn sub(self, other) {
+            // we use twos compliment and so signed and unsigned subtraction are strictly the same
+            // so no need to cast to an i32
+            Self::from_bits_truncate(self.to_bits().wrapping_sub(other.to_bits()))
+        }
     }
-}
 
-impl Div for i24 {
-    type Output = Self;
-
-    fn div(self, other: Self) -> Self {
-        let result = self.to_i32().wrapping_div(other.to_i32());
-        Self::from_i32(result)
+    impl Mul = MulAssign mul_assign {
+        fn mul(self, other) {
+            // we use twos compliment and so signed and unsigned non-widening multiplication are strictly the same
+            // so no need to cast to an i32
+            Self::from_bits_truncate(self.to_bits().wrapping_mul(other.to_bits()))
+        }
     }
-}
 
-impl Rem for i24 {
-    type Output = Self;
+    impl Div = DivAssign div_assign {
+        fn div(self, other) {
+            let result = self.to_i32().wrapping_div(other.to_i32());
+            Self::wrapping_from_i32(result)
+        }
+    }
 
-    fn rem(self, other: Self) -> Self {
-        let result = self.to_i32().wrapping_rem(other.to_i32());
-        Self::from_i32(result)
+    impl Rem = RemAssign rem_assign {
+        fn rem(self, other) {
+            let result = self.to_i32().wrapping_rem(other.to_i32());
+            Self::wrapping_from_i32(result)
+        }
+    }
+
+
+    impl BitAnd = BitAndAssign bitand_assign {
+        fn bitand(self, rhs) {
+            let bits = self.to_bits() & rhs.to_bits();
+            // Safety:
+            // since we and 2 values that both have the most significant byte set to zero
+            // the output will always have the most significant byte set to zero
+            unsafe { i24::from_bits(bits) }
+        }
+    }
+
+    impl BitOr = BitOrAssign bitor_assign {
+        fn bitor(self, rhs) {
+            let bits = self.to_bits() | rhs.to_bits();
+            // Safety:
+            // since we and 2 values that both have the most significant byte set to zero
+            // the output will always have the most significant byte set to zero
+            unsafe { i24::from_bits(bits) }
+        }
+    }
+
+    impl BitXor = BitXorAssign bitxor_assign {
+        fn bitxor(self, rhs) {
+            let bits = self.to_bits() ^ rhs.to_bits();
+            // Safety:
+            // since we and 2 values that both have the most significant byte set to zero
+            // the output will always have the most significant byte set to zero
+            unsafe { i24::from_bits(bits) }
+        }
     }
 }
 
 impl Neg for i24 {
     type Output = Self;
 
+    #[inline(always)]
     fn neg(self) -> Self {
-        let i32_result = self.to_i32().wrapping_neg();
-        i24::from_i32(i32_result)
+        // this is how you negate twos compliment numbers
+        i24::from_bits_truncate((!self.to_bits()) + 1)
     }
 }
 
 impl Not for i24 {
     type Output = Self;
 
+    #[inline(always)]
     fn not(self) -> Self {
-        let i32_result = !self.to_i32();
-        i24::from_i32(i32_result)
-    }
-}
-
-impl BitAnd for i24 {
-    type Output = Self;
-
-    fn bitand(self, rhs: Self) -> Self::Output {
-        let result = self.to_i32() & rhs.to_i32();
-        Self::from_i32(result)
-    }
-}
-
-impl BitOr for i24 {
-    type Output = Self;
-
-    fn bitor(self, rhs: Self) -> Self::Output {
-        let result = self.to_i32() | rhs.to_i32();
-        Self::from_i32(result)
-    }
-}
-
-impl BitXor for i24 {
-    type Output = Self;
-
-    fn bitxor(self, rhs: Self) -> Self::Output {
-        let result = self.to_i32() ^ rhs.to_i32();
-        Self::from_i32(result)
+        i24::from_bits_truncate(!self.to_bits())
     }
 }
 
 impl Shl<u32> for i24 {
     type Output = Self;
 
+    #[inline(always)]
     fn shl(self, rhs: u32) -> Self::Output {
-        let result = (self.to_i32() << rhs) & 0x00FFFFFF;
-        if result & 0x800000 != 0 {
-            Self::from_i32(result | -0x1000000)
-        } else {
-            Self::from_i32(result)
-        }
+        Self::from_bits_truncate(self.to_bits() << rhs)
     }
 }
 
 impl Shr<u32> for i24 {
     type Output = Self;
 
+    #[inline(always)]
     fn shr(self, rhs: u32) -> Self::Output {
-        let value = self.to_i32();
-        let result = if value < 0 {
-            ((value >> rhs) | (-1 << (24 - rhs))) & 0x00FFFFFF
-        } else {
-            (value >> rhs) & 0x00FFFFFF
-        };
-        Self::from_i32(result)
+        // Safety:
+        // we do a logical shift right by 8 at the end
+        // and so the most significant octet/byte is set to 0
+
+        // logic:
+        // <8 bits empty> <i24 sign bit> <rest>
+        // we shift everything up by 8
+        // <i24 sign bit on i32 sign bit> <rest> <8 bits empty>
+        // then we do an arithmetic shift
+        // <sign bit * n> <i24 sign bit> <rest> <8 - n bits empty>
+        // after we shift everything down by 8
+        // <8 bits empty> <sign bit * n> <sign bit> <first 23 - n bits of rest>
+        unsafe { Self::from_bits(((self.to_bits() << 8) as i32 >> rhs) as u32 >> 8) }
     }
 }
 
-impl Display for i24 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_i32())
+impl ShrAssign<u32> for i24 {
+    #[inline(always)]
+    fn shr_assign(&mut self, rhs: u32) {
+        *self = Shr::shr(*self, rhs)
     }
 }
 
-impl FromStr for i24 {
-    type Err = I24Error;
+impl ShlAssign<u32> for i24 {
+    #[inline(always)]
+    fn shl_assign(&mut self, rhs: u32) {
+        *self = Shl::shl(*self, rhs)
+    }
+}
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let i32_result = i32::from_str(s)?;
-        if i32_result < -8388608 || i32_result > 8388607 {
-            Err(I24Error::OutOfRange)
-        } else {
-            Ok(i24::from_i32(i32_result))
+macro_rules! impl_fmt {
+    ($(impl $name: path)+) => {$(
+        impl $name for i24 {
+            #[inline]
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                <i32 as $name>::fmt(&self.to_i32(), f)
+            }
         }
+    )*};
+}
+
+macro_rules! impl_bits_fmt {
+    ($(impl $name: path)+) => {$(
+        impl $name for i24 {
+            #[inline(always)]
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                <u32 as $name>::fmt(self.as_bits(), f)
+            }
+        }
+    )*};
+}
+
+impl_fmt! {
+    impl Display
+    impl Debug
+}
+
+impl_bits_fmt! {
+    impl UpperHex
+    impl LowerHex
+
+    impl Octal
+    impl fmt::Binary
+}
+
+impl Hash for i24 {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        I24Repr::hash(&self.0, state)
+    }
+
+    fn hash_slice<H: Hasher>(data: &[Self], state: &mut H)
+    where
+        Self: Sized,
+    {
+        // i24 is repr(transparent)
+        I24Repr::hash_slice(
+            unsafe { std::mem::transmute::<&[Self], &[I24Repr]>(data) },
+            state,
+        )
     }
 }
-
-macro_rules! implement_ops_assign {
-    ($($trait_path:path { $($function_name:ident),* }),*) => {
-        $(
-            impl $trait_path for i24 {
-                $(
-                    fn $function_name(&mut self, other: Self){
-                        let mut self_i32: i32 = self.to_i32();
-                        let other_i32: i32 = other.to_i32();
-                        self_i32.$function_name(other_i32);
-                    }
-                )*
-            }
-        )*
-    };
-}
-
-macro_rules! implement_ops_assign_ref {
-    ($($trait_path:path { $($function_name:ident),* }),*) => {
-        $(
-            impl $trait_path for &i24 {
-                $(
-                    fn $function_name(&mut self, other: Self){
-                        let mut self_i32: i32 = self.to_i32();
-                        let other_i32: i32 = other.to_i32();
-                        self_i32.$function_name(other_i32);
-                    }
-                )*
-            }
-        )*
-    };
-}
-
-implement_ops_assign!(
-    AddAssign { add_assign },
-    SubAssign { sub_assign },
-    MulAssign { mul_assign },
-    DivAssign { div_assign },
-    RemAssign { rem_assign },
-    BitAndAssign { bitand_assign },
-    BitOrAssign { bitor_assign },
-    BitXorAssign { bitxor_assign },
-    ShlAssign { shl_assign },
-    ShrAssign { shr_assign }
-);
-
-implement_ops_assign_ref!(
-    AddAssign { add_assign },
-    SubAssign { sub_assign },
-    MulAssign { mul_assign },
-    DivAssign { div_assign },
-    RemAssign { rem_assign },
-    BitAndAssign { bitand_assign },
-    BitOrAssign { bitor_assign },
-    BitXorAssign { bitxor_assign },
-    ShlAssign { shl_assign },
-    ShrAssign { shr_assign }
-);
 
 #[cfg(test)]
 mod i24_tests {
@@ -514,114 +674,200 @@ mod i24_tests {
 
     #[test]
     fn test_arithmetic_operations() {
-        let a = i24::from_i32(100);
-        let b = i24::from_i32(50);
+        let a = i24!(100);
+        let b = i24!(50);
 
-        assert_eq!((a + b).to_i32(), 150);
-        assert_eq!((a - b).to_i32(), 50);
-        assert_eq!((a * b).to_i32(), 5000);
-        assert_eq!((a / b).to_i32(), 2);
-        assert_eq!((a % b).to_i32(), 0);
+        assert_eq!(a + b, i24!(150));
+        assert_eq!(a - b, i24!(50));
+        assert_eq!(a * b, i24!(5000));
+        assert_eq!(a / b, i24!(2));
+        assert_eq!(a % b, i24!(0));
+    }
+
+    #[test]
+    fn test_negative_operations() {
+        let a = i24!(100);
+        let b = i24!(-50);
+
+        assert_eq!(a + b, i24!(50));
+        assert_eq!(a - b, i24!(150));
+        assert_eq!(a * b, i24!(-5000));
+        assert_eq!(a / b, i24!(-2));
     }
 
     #[test]
     fn test_bitwise_operations() {
-        let a = i24::from_i32(0b101010);
-        let b = i24::from_i32(0b110011);
+        let a = i24!(0b101010);
+        let b = i24!(0b110011);
 
-        assert_eq!((a & b).to_i32(), 0b100010);
-        assert_eq!((a | b).to_i32(), 0b111011);
-        assert_eq!((a ^ b).to_i32(), 0b011001);
-        assert_eq!((a << 2).to_i32(), 0b10101000);
-        assert_eq!((a >> 2).to_i32(), 0b1010);
+        assert_eq!(a & b, i24!(0b100010));
+        assert_eq!(a | b, i24!(0b111011));
+        assert_eq!(a ^ b, i24!(0b011001));
+        assert_eq!(a << 2, i24!(0b10101000));
+        assert_eq!(a >> 2, i24!(0b1010));
+    }
+
+    #[test]
+    fn test_checked_addition() {
+        assert_eq!(i24!(10).checked_add(i24!(20)), Some(i24!(30)));
+        assert_eq!(i24!(10).checked_add(i24!(-20)), Some(i24!(-10)));
+        // Overflow cases
+        assert_eq!(i24::MAX.checked_add(i24::one()), None);
+        assert_eq!(
+            (i24::MAX - i24::one()).checked_add(i24::one() * i24!(2)),
+            None
+        );
+    }
+
+    #[test]
+    fn test_checked_subtraction() {
+        assert_eq!(i24!(10).checked_sub(i24!(20)), Some(i24!(-10)));
+        assert_eq!(i24!(10).checked_sub(i24!(-20)), Some(i24!(30)));
+
+        // Overflow cases
+        assert_eq!(i24::MIN.checked_sub(i24::one()), None);
+        assert_eq!(
+            (i24::MIN + i24::one()).checked_sub(i24::one() * i24!(2)),
+            None
+        );
+    }
+
+    #[test]
+    fn test_checked_division() {
+        assert_eq!(i24!(20).checked_div(i24!(5)), Some(i24!(4)));
+        assert_eq!(i24!(20).checked_div(i24!(0)), None);
+    }
+
+    #[test]
+    fn test_checked_multiplication() {
+        assert_eq!(i24!(5).checked_mul(i24!(6)), Some(i24!(30)));
+        assert_eq!(i24::MAX.checked_mul(i24!(2)), None);
+    }
+
+    #[test]
+    fn test_checked_remainder() {
+        assert_eq!(i24!(20).checked_rem(i24!(5)), Some(i24!(0)));
+        assert_eq!(i24!(20).checked_rem(i24!(0)), None);
     }
 
     #[test]
     fn test_unary_operations() {
-        let a = i24::from_i32(100);
+        let a = i24!(100);
 
-        assert_eq!((-a).to_i32(), -100);
-        assert_eq!((!a).to_i32(), -101);
-    }
-
-    #[test]
-    fn test_from_i32() {
-        assert_eq!(i24::from_i32(0).to_i32(), 0);
-        assert_eq!(i24::from_i32(8388607).to_i32(), 8388607); // Max positive value
-        assert_eq!(i24::from_i32(-8388608).to_i32(), -8388608); // Min negative value
+        assert_eq!(-a, i24!(-100));
+        assert_eq!(!a, i24!(-101));
     }
 
     #[test]
     fn test_from_bytes() {
-        assert_eq!(i24::from_ne_bytes([0x01, 0x02, 0x03]).to_i32(), 0x030201);
-        assert_eq!(i24::from_le_bytes([0x01, 0x02, 0x03]).to_i32(), 0x030201);
-        assert_eq!(i24::from_be_bytes([0x01, 0x02, 0x03]).to_i32(), 0x010203);
-    }
-
-    #[test]
-    fn test_to_i32() {
-        let a = i24::from_ne_bytes([0xFF, 0xFF, 0x7F]);
-        assert_eq!(a.to_i32(), 8388607); // Max positive value
-
-        let b = i24::from_ne_bytes([0x00, 0x00, 0x80]);
-        assert_eq!(b.to_i32(), -8388608); // Min negative value
+        let le = i24!(0x030201);
+        let be = i24!(0x010203);
+        assert_eq!(i24::from_ne_bytes([0x01, 0x02, 0x03]), if cfg!(target_endian = "big") { be } else { le });
+        assert_eq!(i24::from_le_bytes([0x01, 0x02, 0x03]), le);
+        assert_eq!(i24::from_be_bytes([0x01, 0x02, 0x03]), be);
     }
 
     #[test]
     fn test_zero_and_one() {
-        assert_eq!(i24::zero().to_i32(), 0);
-        assert_eq!(i24::one().to_i32(), 1);
+        assert_eq!(i24::zero(), i24!(0));
+        assert_eq!(i24::one(), i24!(1));
     }
+    
     #[test]
     fn test_from_str() {
-        assert_eq!(i24::from_str("100").unwrap().to_i32(), 100);
-        assert_eq!(i24::from_str("-100").unwrap().to_i32(), -100);
-        assert_eq!(i24::from_str("8388607").unwrap().to_i32(), 8388607); // Max positive value
-        assert_eq!(i24::from_str("-8388608").unwrap().to_i32(), -8388608); // Min negative value
-        assert_eq!(i24::from_str("8388608").unwrap_err(), I24Error::OutOfRange);
-        assert_eq!(i24::from_str("-8388609").unwrap_err(), I24Error::OutOfRange);
+        assert_eq!(i24::from_str("100").unwrap(), i24!(100));
+        assert_eq!(i24::from_str("-100").unwrap(), i24!(-100));
+        assert_eq!(
+            i24::from_str(&format!("{}", i24::MAX)).unwrap(),
+            i24::MAX
+        );
+        assert_eq!(
+            i24::from_str(&format!("{}", i24::MIN)).unwrap(),
+            i24::MIN
+        );
+        assert_eq!(
+            i24::from_str("8388608").unwrap_err(),
+            ParseI24Error::OutOfRange
+        );
+        assert_eq!(
+            i24::from_str("-8388609").unwrap_err(),
+            ParseI24Error::OutOfRange
+        );
     }
 
     #[test]
     fn test_display() {
-        assert_eq!(format!("{}", i24::from_i32(100)), "100");
-        assert_eq!(format!("{}", i24::from_i32(-100)), "-100");
+        assert_eq!(format!("{}", i24!(100)), "100");
+        assert_eq!(format!("{}", i24!(-100)), "-100");
     }
 
     #[test]
     fn test_wrapping_behavior() {
-        let max = i24::from_i32(8388607);
-        assert_eq!((max + i24::one()).to_i32(), -8388608);
+        assert_eq!(i24::MAX + i24::one(), i24::MIN);
+        assert_eq!(i24::MAX + i24::one() + i24::one(), i24::MIN + i24::one());
 
-        let min = i24::from_i32(-8388608);
-        assert_eq!((min - i24::one()).to_i32(), 8388607);
+        assert_eq!(i24::MIN - i24::one(), i24::MAX);
+        assert_eq!(i24::MIN - (i24::one() + i24::one()), i24::MAX - i24::one());
+
+        assert_eq!(-i24::MIN, i24::MIN)
+    }
+
+    #[test]
+    fn discriminant_optimization() {
+        // this isn't guaranteed by rustc, but this should still hold true
+        // if this fails because rustc stops doing it, just remove this test
+        // otherwise investigate why this isn't working
+        assert_eq!(size_of::<i24>(), size_of::<Option<i24>>());
+        assert_eq!(size_of::<i24>(), size_of::<Option<Option<i24>>>());
+        assert_eq!(size_of::<i24>(), size_of::<Option<Option<Option<i24>>>>());
+        assert_eq!(
+            size_of::<i24>(),
+            size_of::<Option<Option<Option<Option<i24>>>>>()
+        );
     }
 
     #[test]
     fn test_shift_operations() {
-        let a = i24::from_i32(0b1);
+        let a = i24!(0b1);
 
         // Left shift
-        assert_eq!((a << 23).to_i32(), -8388608); // 0x800000, which is the minimum negative value
-        assert_eq!((a << 24).to_i32(), 0); // Shifts out all bits
+        assert_eq!(a << 23, i24::MIN); // 0x800000, which is the minimum negative value
+        assert_eq!(a << 24, i24::zero()); // Shifts out all bits
 
         // Right shift
-        let b = i24::from_i32(-1); // All bits set
-        assert_eq!((b >> 1).to_i32(), -1); // Sign extension
-        assert_eq!((b >> 23).to_i32(), -1); // Still all bits set due to sign extension
-        assert_eq!((b >> 24).to_i32(), -1); // No change after 23 bits
+        let b = i24!(-1); // All bits set
+        assert_eq!(b >> 1, i24!(-1)); // Sign extension
+        assert_eq!(b >> 23, i24!(-1)); // Still all bits set due to sign extension
+        assert_eq!(b >> 24, i24!(-1)); // No change after 23 bits
 
         // Edge case: maximum positive value
-        let c = i24::from_i32(0x7FFFFF); // 8388607
-        assert_eq!((c << 1).to_i32(), -2); // 0xFFFFFE in 24-bit, which is -2 when sign-extended
+        let c = i24!(0x7FFFFF); // 8388607
+        assert_eq!(c << 1, i24!(-2)); // 0xFFFFFE in 24-bit, which is -2 when sign-extended
 
         // Edge case: minimum negative value
-        let d = i24::from_i32(-0x800000); // -8388608
-        assert_eq!((d >> 1).to_i32(), -4194304); // -0x400000
+        let d = i24::MIN; // (-0x800000)
+        assert_eq!(d >> 1, i24!(-0x400000));
+        assert_eq!(d >> 2, i24!(-0x200000));
+        assert_eq!(d >> 3, i24!(-0x100000));
+        assert_eq!(d >> 4, i24!(-0x080000));
 
         // Additional test for left shift wrapping
-        assert_eq!((c << 1).to_i32(), -2); // 0xFFFFFE
-        assert_eq!((c << 2).to_i32(), -4); // 0xFFFFFC
-        assert_eq!((c << 3).to_i32(), -8); // 0xFFFFF8
+        assert_eq!(c << 1, i24!(-2)); // 0xFFFFFE
+        assert_eq!(c << 2, i24!(-4)); // 0xFFFFFC
+        assert_eq!(c << 3, i24!(-8)); // 0xFFFFF8
+    }
+    
+    #[test]
+    fn test_to_from_i32() {
+        for i in I24Repr::MIN..=I24Repr::MAX {
+            assert_eq!(i24::from_i32(i).unwrap().to_i32(), i)
+        }
+    }
+
+    #[test]
+    fn test_to_from_bits() {
+        for i in 0..(1 << 24) {
+            assert_eq!(i24::from_bits_truncate(i).to_bits(), i)
+        }
     }
 }
