@@ -1,3 +1,5 @@
+#![no_std]
+
 //! # i24: A 24-bit Signed Integer Type
 //!
 //! The `i24` crate provides a 24-bit signed integer type for Rust, filling the gap between
@@ -63,58 +65,24 @@
 use crate::repr::I24Repr;
 use bytemuck::{NoUninit, Zeroable};
 use num_traits::{Num, One, Zero};
-use std::fmt;
-use std::fmt::{Debug, Display, LowerHex, Octal, UpperHex};
-use std::hash::{Hash, Hasher};
-use std::ops::{
+use core::fmt;
+use core::fmt::{Debug, Display, LowerHex, Octal, UpperHex};
+use core::hash::{Hash, Hasher};
+use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
     Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
 };
-use std::{
+use core::{
     ops::{Neg, Not},
     str::FromStr,
 };
+use core::num::ParseIntError;
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
-/// Represents errors that can occur when working with the `i24` type.
-#[derive(Debug, PartialEq, Eq)]
-pub enum ParseI24Error {
-    /// An error occurred while parsing a string to an `i24`.
-    ///
-    /// This variant wraps the standard library's `ParseIntError`.
-    ParseError(std::num::ParseIntError),
-
-    /// The value is out of the valid range for an `i24`.
-    ///
-    /// Valid range for `i24` is [-8,388,608, 8,388,607].
-    OutOfRange,
-}
-
-impl Display for ParseI24Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ParseI24Error::ParseError(e) => write!(f, "Parse error: {}", e),
-            ParseI24Error::OutOfRange => write!(f, "Value out of range for i24"),
-        }
-    }
-}
-
-impl std::error::Error for ParseI24Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            ParseI24Error::ParseError(e) => Some(e),
-            ParseI24Error::OutOfRange => None,
-        }
-    }
-}
-
-impl From<std::num::ParseIntError> for ParseI24Error {
-    fn from(err: std::num::ParseIntError) -> Self {
-        ParseI24Error::ParseError(err)
-    }
-}
+#[cfg(feature = "std")]
+extern crate std;
 
 mod repr;
 
@@ -412,23 +380,47 @@ impl Zero for i24 {
     }
 }
 
+
+// TODO: fixme make const when https://github.com/rust-lang/rust/pull/124941
+//       or const_int_from_str gets stabilized
+pub fn from_str_error(bad_val: &str) -> ParseIntError {
+    #[allow(clippy::from_str_radix_10)]
+    match i32::from_str_radix(bad_val, 10) {
+        Err(err) => err,
+        Ok(_) => unreachable!()
+    }
+}
+
+pub fn positive_overflow() -> ParseIntError {
+    from_str_error("1000000000000000000000000000000000000000")
+}
+
+pub fn negative_overflow() -> ParseIntError {
+    from_str_error("-1000000000000000000000000000000000000000")
+}
+
 macro_rules! from_str {
     ($meth: ident($($args: tt)*)) => {
         i32::$meth($($args)*)
-            .map_err(ParseI24Error::ParseError)
-            .and_then(|x| i24::from_i32(x).ok_or(ParseI24Error::OutOfRange))
+            .and_then(|x| i24::from_i32(x).ok_or_else(|| {
+                if x < 0 {
+                    negative_overflow()
+                } else {
+                    positive_overflow()
+                }
+            }))
     };
 }
 
 impl Num for i24 {
-    type FromStrRadixErr = ParseI24Error;
+    type FromStrRadixErr = ParseIntError;
     fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
         from_str!(from_str_radix(str, radix))
     }
 }
 
 impl FromStr for i24 {
-    type Err = ParseI24Error;
+    type Err = ParseIntError;
 
     fn from_str(str: &str) -> Result<Self, Self::Err> {
         from_str!(from_str(str))
@@ -662,7 +654,7 @@ impl Hash for i24 {
     {
         // i24 is repr(transparent)
         I24Repr::hash_slice(
-            unsafe { std::mem::transmute::<&[Self], &[I24Repr]>(data) },
+            unsafe { core::mem::transmute::<&[Self], &[I24Repr]>(data) },
             state,
         )
     }
@@ -670,6 +662,10 @@ impl Hash for i24 {
 
 #[cfg(test)]
 mod i24_tests {
+    extern crate std;
+
+    use std::format;
+    use std::num::IntErrorKind;
     use super::*;
 
     #[test]
@@ -786,12 +782,12 @@ mod i24_tests {
             i24::MIN
         );
         assert_eq!(
-            i24::from_str("8388608").unwrap_err(),
-            ParseI24Error::OutOfRange
+            *i24::from_str("8388608").unwrap_err().kind(),
+            IntErrorKind::PosOverflow
         );
         assert_eq!(
-            i24::from_str("-8388609").unwrap_err(),
-            ParseI24Error::OutOfRange
+            *i24::from_str("-8388609").unwrap_err().kind(),
+            IntErrorKind::NegOverflow
         );
     }
 

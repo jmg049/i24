@@ -1,6 +1,6 @@
 use bytemuck::{NoUninit, Zeroable};
-use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
+use core::cmp::Ordering;
+use core::hash::{Hash, Hasher};
 
 #[derive(Debug, Copy, Clone)]
 #[repr(u8)]
@@ -188,7 +188,7 @@ impl I24Repr {
             // so after swapping the bytes it turns into
             // [zero, data3, data2, data1]
             // which is the proper layout for `BigEndianI24Repr`
-            unsafe { std::mem::transmute::<u32, BigEndianI24Repr>(val) }
+            unsafe { core::mem::transmute::<u32, BigEndianI24Repr>(val) }
         }
     }
 
@@ -216,7 +216,7 @@ impl I24Repr {
     #[inline(always)]
     pub(super) const fn to_bits(self) -> u32 {
         // Safety: I24Repr has the same memory layout as a `u32`
-        unsafe { std::mem::transmute::<I24Repr, u32>(self) }
+        unsafe { core::mem::transmute::<I24Repr, u32>(self) }
     }
 
     /// Safety: the most significant byte has to equal 0
@@ -224,20 +224,20 @@ impl I24Repr {
     pub(super) const unsafe fn from_bits(bits: u32) -> I24Repr {
         debug_assert!((bits & I24Repr::BITS_MASK) == bits);
         // Safety: upheld by caller
-        unsafe { std::mem::transmute::<u32, I24Repr>(bits) }
+        unsafe { core::mem::transmute::<u32, I24Repr>(bits) }
     }
 
     #[inline(always)]
     pub(super) const fn as_bits(&self) -> &u32 {
         // Safety: I24Repr has the same memory layout and alignment as a `u32`
-        unsafe { std::mem::transmute::<&I24Repr, &u32>(self) }
+        unsafe { core::mem::transmute::<&I24Repr, &u32>(self) }
     }
 
     /// this returns a slice of u32's with the most significant byte set to zero
     #[inline(always)]
     const fn slice_as_bits(slice: &[Self]) -> &[u32] {
         // Safety: I24Repr has the same memory layout and alignment as a `u32`
-        unsafe { std::mem::transmute::<&[I24Repr], &[u32]>(slice) }
+        unsafe { core::mem::transmute::<&[I24Repr], &[u32]>(slice) }
     }
 
     #[inline(always)]
