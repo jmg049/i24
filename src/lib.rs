@@ -682,7 +682,7 @@ macro_rules! impl_from {
 }
 
 impl_from! {
-	u8 i8 u16 i16
+	bool u8 i8 u16 i16
 }
 
 macro_rules! impl_try_from {
@@ -910,12 +910,18 @@ mod i24_tests {
 	fn test_from_impls() {
 		macro_rules! test {
 		    ($type_to_test:ty) => {
-			    let critical_numbers = [0 as $type_to_test, 42 as $type_to_test, <$type_to_test>::MIN, <$type_to_test>::MAX];
-			    for i in critical_numbers {
+			    let critical_values = [0 as $type_to_test, 42 as $type_to_test, <$type_to_test>::MIN, <$type_to_test>::MAX];
+			    for i in critical_values {
 				    assert_eq!(i as i32, i24::from(i).to_i32());
 			    }
 		    };
+			($type_to_test:ty: $critical_values:expr) => {
+				for i in $critical_values {
+				    assert_eq!(i as i32, i24::from(i).to_i32());
+			    }
+			};
 		}
+		test!(bool: [true, false]);
 		test!(u8);
 		test!(i8);
 		test!(u16);
@@ -926,8 +932,8 @@ mod i24_tests {
 	fn test_try_from_impls() {
 		macro_rules! test {
 		    ($type_to_test:ty) => {
-			    let critical_numbers = [0 as $type_to_test, 42 as $type_to_test, <$type_to_test>::MIN, <$type_to_test>::MAX];
-			    for i in critical_numbers {
+			    let critical_values = [0 as $type_to_test, 42 as $type_to_test, <$type_to_test>::MIN, <$type_to_test>::MAX];
+			    for i in critical_values {
 				    let expected;
 				    if i < I24Repr::MIN.try_into().unwrap_or(0) || i > I24Repr::MAX.try_into().unwrap() {
 					    expected = Err(ParseI24Error::OutOfRange);
