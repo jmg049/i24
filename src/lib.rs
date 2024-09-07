@@ -668,6 +668,42 @@ impl Hash for i24 {
     }
 }
 
+macro_rules! impl_from {
+    ($($target_type:ty)*) => {
+	    $(
+		    impl core::convert::From<$target_type> for i24 {
+			    fn from(value: $target_type) -> Self {
+			        i24::from_i32(i32::from(value))
+			            .expect("From is only implemented for types with less than 24 bits")
+			    }
+		    }
+	    )*
+    }
+}
+
+impl_from! {
+	u8 i8 u16 i16
+}
+
+macro_rules! impl_try_from {
+    ($($target_type:ty)*) => {
+	    $(
+		    impl core::convert::TryFrom<$target_type> for i24 {
+			    type Error = ParseI24Error;
+			    fn try_from(value: $target_type) -> Result<Self, Self::Error> {
+			        i24::from_i32(
+				        i32::try_from(value)
+				        .map_err(|_| ParseI24Error::OutOfRange)?
+			        ).ok_or(ParseI24Error::OutOfRange)
+			    }
+		    }
+	    )*
+    }
+}
+impl_try_from! {
+	u32 i32 usize isize u64 i64 u128 i128
+}
+
 #[cfg(test)]
 mod i24_tests {
     use super::*;
@@ -870,4 +906,45 @@ mod i24_tests {
             assert_eq!(i24::from_bits_truncate(i).to_bits(), i)
         }
     }
+	#[test]
+	fn test_from_impls() {
+		macro_rules! test {
+		    ($type_to_test:ty) => {
+			    let critical_numbers = [0, 42, <$type_to_test>::MIN, <$type_to_test>::MAX];
+			    for i in critical_numbers {
+				    assert_eq!(i as i32, i24::from(i).to_i32());
+			    }
+		    };
+		}
+		test!(u8);
+		test!(i8);
+		test!(u16);
+		test!(i16);
+	}
+
+	#[test]
+	fn test_try_from_impls() {
+		macro_rules! test {
+		    ($type_to_test:ty) => {
+			    let critical_numbers = [0, 42, <$type_to_test>::MIN, <$type_to_test>::MAX];
+			    for i in critical_numbers {
+				    let expected;
+				    if i < I24Repr::MIN.try_into().unwrap_or(0) || i > I24Repr::MAX.try_into().unwrap() {
+					    expected = Err(ParseI24Error::OutOfRange);
+				    } else {
+					    expected = Ok(i as i32)
+				    }
+				    assert_eq!(i24::try_from(i).map(|num| num.to_i32()), expected);
+			    }
+		    };
+		}
+		test!(i32);
+		test!(u32);
+		test!(isize);
+		test!(usize);
+		test!(i64);
+		test!(u64);
+		test!(i128);
+		test!(u128);
+	}
 }
