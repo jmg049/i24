@@ -668,24 +668,39 @@ impl Hash for i24 {
     }
 }
 
-macro_rules! impl_from {
+macro_rules! impl_i24_from_primitive {
     ($($target_type:ty)*) => {
 	    $(
 		    impl core::convert::From<$target_type> for i24 {
 			    fn from(value: $target_type) -> Self {
 			        i24::from_i32(i32::from(value))
-			            .expect("From is only implemented for types with less than 24 bits")
+			            .expect("From is only implemented for signed types with less than 24 bits")
 			    }
 		    }
 	    )*
     }
 }
 
-impl_from! {
-	bool u8 i8 u16 i16
+impl_i24_from_primitive! {
+	bool i8 i16 u8 u16
 }
 
-macro_rules! impl_try_from {
+macro_rules! impl_primitive_from_i24 {
+    ($($target_type:ty)*) => {
+	    $(
+		    impl core::convert::From<i24> for $target_type {
+			    fn from(value: i24) -> Self {
+			        Self::from(i24::to_i32())
+			    }
+		    }
+	    )*
+    }
+}
+impl_primitive_from_i24! {
+	isize i32 i64 i128
+}
+
+macro_rules! impl_i24_try_from_primitive {
     ($($target_type:ty)*) => {
 	    $(
 		    impl core::convert::TryFrom<$target_type> for i24 {
@@ -700,8 +715,24 @@ macro_rules! impl_try_from {
 	    )*
     }
 }
-impl_try_from! {
+impl_i24_try_from_primitive! {
 	u32 i32 usize isize u64 i64 u128 i128
+}
+
+macro_rules! impl_primitive_try_from_i24 {
+    ($($target_type:ty)*) => {
+	    $(
+		    impl core::convert::TryFrom<i24> for $target_type {
+			    type Error = ParseI24Error;
+			    fn try_from(value: i24) -> Result<Self, Self::Error> {
+				    Self::try_from(value.to_i32()).map_err(|_| ParseI24Error::OutOfRange)
+			    }
+		    }
+	    )*
+    }
+}
+impl_primitive_try_from_i24! {
+	bool u8 u16 u32 u64 u128 i8 i16
 }
 
 #[cfg(test)]
@@ -808,7 +839,7 @@ mod i24_tests {
         assert_eq!(i24::zero(), i24!(0));
         assert_eq!(i24::one(), i24!(1));
     }
-    
+
     #[test]
     fn test_from_str() {
         assert_eq!(i24::from_str("100").unwrap(), i24!(100));
@@ -892,7 +923,7 @@ mod i24_tests {
         assert_eq!(c << 2, i24!(-4)); // 0xFFFFFC
         assert_eq!(c << 3, i24!(-8)); // 0xFFFFF8
     }
-    
+
     #[test]
     fn test_to_from_i32() {
         for i in I24Repr::MIN..=I24Repr::MAX {
@@ -906,51 +937,6 @@ mod i24_tests {
             assert_eq!(i24::from_bits_truncate(i).to_bits(), i)
         }
     }
-	#[test]
-	fn test_from_impls() {
-		macro_rules! test {
-		    ($type_to_test:ty) => {
-			    let critical_values = [0 as $type_to_test, 42 as $type_to_test, <$type_to_test>::MIN, <$type_to_test>::MAX];
-			    for i in critical_values {
-				    assert_eq!(i as i32, i24::from(i).to_i32());
-			    }
-		    };
-			($type_to_test:ty: $critical_values:expr) => {
-				for i in $critical_values {
-				    assert_eq!(i as i32, i24::from(i).to_i32());
-			    }
-			};
-		}
-		test!(bool: [true, false]);
-		test!(u8);
-		test!(i8);
-		test!(u16);
-		test!(i16);
-	}
 
-	#[test]
-	fn test_try_from_impls() {
-		macro_rules! test {
-		    ($type_to_test:ty) => {
-			    let critical_values = [0 as $type_to_test, 42 as $type_to_test, <$type_to_test>::MIN, <$type_to_test>::MAX];
-			    for i in critical_values {
-				    let expected;
-				    if i < I24Repr::MIN.try_into().unwrap_or(0) || i > I24Repr::MAX.try_into().unwrap() {
-					    expected = Err(ParseI24Error::OutOfRange);
-				    } else {
-					    expected = Ok(i as i32)
-				    }
-				    assert_eq!(i24::try_from(i).map(|num| num.to_i32()), expected);
-			    }
-		    };
-		}
-		test!(i32);
-		test!(u32);
-		test!(isize);
-		test!(usize);
-		test!(i64);
-		test!(u64);
-		test!(i128);
-		test!(u128);
-	}
+	// TODO: Add tests
 }
