@@ -86,17 +86,7 @@ impl I24Repr {
         // Safety: we only use the first 24 least significant bits (i.e 3 bytes) of the value,
         // and the most significant byte is set to zero
         // therefore layout guarantees hold true
-        unsafe { I24Repr::from_bits(proper_i24) }
-    }
-
-    #[inline]
-    pub const fn from_i32(value: i32) -> Option<Self> {
-        // Check if value fits in the i24 range
-        if value > Self::MAX || value < Self::MIN {
-            return None;
-        }
-
-        Some(Self::wrapping_from_i32(value))
+        unsafe { Self::from_bits(proper_i24) }
     }
 
     #[inline(always)]
@@ -117,7 +107,7 @@ impl I24Repr {
         Self::from_ne_bytes(bytes).to_le()
     }
 
-    pub const fn swap_bytes(self) -> I24Repr {
+    pub const fn swap_bytes(self) -> Self {
         // can't just make a `swap_bytes` without endianness checks
         // because it also swaps their `repr`, and so this is easier to do
         #[cfg(target_endian = "little")]
@@ -131,7 +121,7 @@ impl I24Repr {
     }
 
     #[inline(always)]
-    pub const fn to_be(self) -> I24Repr {
+    pub const fn to_be(self) -> Self {
         #[cfg(target_endian = "big")]
         {
             self
@@ -144,7 +134,7 @@ impl I24Repr {
     }
 
     #[inline(always)]
-    pub const fn to_le(self) -> I24Repr {
+    pub const fn to_le(self) -> Self {
         #[cfg(target_endian = "little")]
         {
             self
@@ -216,34 +206,145 @@ impl I24Repr {
     #[inline(always)]
     pub(super) const fn to_bits(self) -> u32 {
         // Safety: I24Repr has the same memory layout as a `u32`
-        unsafe { core::mem::transmute::<I24Repr, u32>(self) }
+        unsafe { core::mem::transmute::<Self, u32>(self) }
     }
 
     /// Safety: the most significant byte has to equal 0
     #[inline(always)]
-    pub(super) const unsafe fn from_bits(bits: u32) -> I24Repr {
-        debug_assert!((bits & I24Repr::BITS_MASK) == bits);
+    pub(super) const unsafe fn from_bits(bits: u32) -> Self {
+        debug_assert!((bits & Self::BITS_MASK) == bits);
         // Safety: upheld by caller
-        unsafe { core::mem::transmute::<u32, I24Repr>(bits) }
+        unsafe { core::mem::transmute::<u32, Self>(bits) }
     }
 
     #[inline(always)]
     pub(super) const fn as_bits(&self) -> &u32 {
         // Safety: I24Repr has the same memory layout and alignment as a `u32`
-        unsafe { core::mem::transmute::<&I24Repr, &u32>(self) }
+        unsafe { core::mem::transmute::<&Self, &u32>(self) }
     }
 
     /// this returns a slice of u32's with the most significant byte set to zero
     #[inline(always)]
     const fn slice_as_bits(slice: &[Self]) -> &[u32] {
         // Safety: I24Repr has the same memory layout and alignment as a `u32`
-        unsafe { core::mem::transmute::<&[I24Repr], &[u32]>(slice) }
+        unsafe { core::mem::transmute::<&[Self], &[u32]>(slice) }
     }
 
     #[inline(always)]
     const fn const_eq(&self, other: &Self) -> bool {
         (*self.as_bits()) == (*other.as_bits())
     }
+}
+
+macro_rules! impl_infallible_unsigned {
+    ($($meth: ident: $ty:ty),+) => {$(
+        impl I24Repr {
+            #[inline(always)]
+            pub const fn $meth(x: $ty) -> Self {
+                const {
+                    assert!(<$ty>::MIN == 0 && <$ty>::BITS < 24);
+                }
+
+                // checked by the assert above
+                unsafe { Self::from_bits(x as u32) }
+            }
+        }
+    )+};
+}
+
+trait BoolLimits {
+    const MIN: u8 = 0;
+    const BITS: u32 = 1;
+}
+
+impl BoolLimits for bool {}
+
+impl_infallible_unsigned! {
+    from_u8: u8,
+    from_u16: u16,
+    from_bool: bool
+}
+
+macro_rules! impl_infallible_signed {
+    ($($meth: ident: $ty:ty),+) => {$(
+        impl I24Repr {
+            #[inline(always)]
+            pub const fn $meth(x: $ty) -> Self {
+                const {
+                    assert!(<$ty>::MIN < 0 && <$ty>::BITS < 24);
+                }
+
+                // at least on x86 (and probably all arches with sign extention)
+                // this seems like the implementation with the best code gen
+                // https://rust.godbolt.org/z/eThE5n9s1 -> from_i16_3
+
+                // x as u32 sign extends in accord to the refrence (https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions)
+                // if positive this would be just the exact same number
+                // if negative the sign extention is done for us and all we have to do
+                // is zero out the high byte
+                unsafe { Self::from_bits(x as u32 & Self::BITS_MASK) }
+            }
+        }
+    )+};
+}
+
+impl_infallible_signed! {
+    from_i8: i8,
+    from_i16: i16
+}
+
+macro_rules! impl_fallible_unsigned {
+    ($($meth: ident: $ty:ty),+) => {$(
+        impl I24Repr {
+            #[inline(always)]
+            pub const fn $meth(x: $ty) -> Option<Self> {
+                const { assert!(<$ty>::MIN == 0 && <$ty>::BITS > 24) }
+
+                // the 2 impls have equivlent codegen
+                // https://rust.godbolt.org/z/nE7nzGKPT
+                if x > const { Self::MAX as $ty } {
+                    return None
+                }
+
+                // Safety: x is <= Self::MAX meaning the msb is 0
+                Some(unsafe { Self::from_bits(x as u32) })
+            }
+        }
+    )+};
+}
+
+impl_fallible_unsigned! {
+    try_from_u32: u32,
+    try_from_u64: u64,
+    try_from_u128: u128
+}
+
+macro_rules! impl_fallible_signed {
+    ($($meth: ident: $ty:ty),+) => {$(
+        impl I24Repr {
+            #[inline(always)]
+            pub const fn $meth(x: $ty) -> Option<Self> {
+                const { assert!(<$ty>::MIN < 0 && <$ty>::BITS > 24) }
+
+                if x < const { Self::MIN as $ty } || x > const { Self::MAX as $ty } {
+                    return None
+                }
+
+
+                // this cast already sign extends as the source is signed
+                // so we get a valid twos compliment number
+
+                // Safety: we zero off the msb
+                Some(unsafe { Self::from_bits(x as u32 & Self::BITS_MASK) })
+            }
+        }
+    )+};
+}
+
+impl_fallible_signed! {
+    try_from_i32: i32,
+    try_from_i64: i64,
+    try_from_i128: i128
 }
 
 impl PartialOrd<Self> for I24Repr {
@@ -288,7 +389,7 @@ impl Default for I24Repr {
     }
 }
 
-const _ASSERTS: () = const {
+const _: () = {
     macro_rules! unwrap {
         ($e: expr) => {
             match $e {
@@ -300,15 +401,15 @@ const _ASSERTS: () = const {
 
     // test arbitrary numbers
     assert!(I24Repr::const_eq(
-        &unwrap!(I24Repr::from_i32(
-            unwrap!(I24Repr::from_i32(349)).to_i32() - 1897
+        &unwrap!(I24Repr::try_from_i32(
+            unwrap!(I24Repr::try_from_i32(349)).to_i32() - 1897
         )),
-        &unwrap!(I24Repr::from_i32(349 - 1897))
+        &unwrap!(I24Repr::try_from_i32(349 - 1897))
     ));
 
     // test MIN
-    assert!(unwrap!(I24Repr::from_i32(I24Repr::MIN)).to_i32() == I24Repr::MIN);
+    assert!(unwrap!(I24Repr::try_from_i32(I24Repr::MIN)).to_i32() == I24Repr::MIN);
 
     // test MIN
-    assert!(unwrap!(I24Repr::from_i32(I24Repr::MAX)).to_i32() == I24Repr::MAX);
+    assert!(unwrap!(I24Repr::try_from_i32(I24Repr::MAX)).to_i32() == I24Repr::MAX);
 };
