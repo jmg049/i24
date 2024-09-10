@@ -1,3 +1,5 @@
+#![no_std]
+
 //! # i24: A 24-bit Signed Integer Type
 //!
 //! The `i24` crate provides a 24-bit signed integer type for Rust, filling the gap between
@@ -28,7 +30,7 @@
 //! Then, in your Rust code:
 //!
 //! ```rust
-//! use i24::i24;
+//! # #[macro_use] extern crate i24;
 //!
 //! let a = i24!(1000);
 //! let b = i24!(2000);
@@ -62,59 +64,25 @@
 
 use crate::repr::I24Repr;
 use bytemuck::{NoUninit, Zeroable};
-use num_traits::{Num, One, Zero};
-use std::fmt;
-use std::fmt::{Debug, Display, LowerHex, Octal, UpperHex};
-use std::hash::{Hash, Hasher};
-use std::ops::{
+use core::fmt;
+use core::fmt::{Debug, Display, LowerHex, Octal, UpperHex};
+use core::hash::{Hash, Hasher};
+use core::num::ParseIntError;
+use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
     Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
 };
-use std::{
+use core::{
     ops::{Neg, Not},
     str::FromStr,
 };
+use num_traits::{Num, One, Zero};
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 
-/// Represents errors that can occur when working with the `i24` type.
-#[derive(Debug, PartialEq, Eq)]
-pub enum ParseI24Error {
-    /// An error occurred while parsing a string to an `i24`.
-    ///
-    /// This variant wraps the standard library's `ParseIntError`.
-    ParseError(std::num::ParseIntError),
-
-    /// The value is out of the valid range for an `i24`.
-    ///
-    /// Valid range for `i24` is [-8,388,608, 8,388,607].
-    OutOfRange,
-}
-
-impl Display for ParseI24Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ParseI24Error::ParseError(e) => write!(f, "Parse error: {}", e),
-            ParseI24Error::OutOfRange => write!(f, "Value out of range for i24"),
-        }
-    }
-}
-
-impl std::error::Error for ParseI24Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            ParseI24Error::ParseError(e) => Some(e),
-            ParseI24Error::OutOfRange => None,
-        }
-    }
-}
-
-impl From<std::num::ParseIntError> for ParseI24Error {
-    fn from(err: std::num::ParseIntError) -> Self {
-        ParseI24Error::ParseError(err)
-    }
-}
+#[cfg(feature = "std")]
+extern crate std;
 
 mod repr;
 
@@ -140,13 +108,21 @@ unsafe impl Zeroable for i24 where I24Repr: Zeroable {}
 // Safety: repr(transparent) and so if I24Repr is NoUninit so should i24 be
 unsafe impl NoUninit for i24 where I24Repr: NoUninit {}
 
+#[doc(hidden)]
+pub mod __macros__ {
+    pub use bytemuck::Zeroable;
+}
+
 /// creates an `i24` from a constant expression
 /// will give a compile error if the expression overflows an i24
 #[macro_export]
 macro_rules! i24 {
+    (0) => {
+        <i24 as $crate::__macros__::Zeroable>::zeroed()
+    };
     ($e: expr) => {
         const {
-            match $crate::i24::from_i32($e) {
+            match $crate::i24::try_from_i32($e) {
                 Some(x) => x,
                 None => panic!(concat!(
                     "out of range value ",
@@ -201,23 +177,6 @@ impl i24 {
     #[inline(always)]
     pub const fn to_i32(self) -> i32 {
         self.0.to_i32()
-    }
-
-    /// Creates an `i24` from a 32-bit signed integer.
-    ///
-    /// # Arguments
-    ///
-    /// * `n` - The 32-bit signed integer to convert.
-    ///
-    /// # Returns
-    ///
-    /// Some(i24) if n is in the valid range
-    #[inline(always)]
-    pub const fn from_i32(n: i32) -> Option<Self> {
-        match I24Repr::from_i32(n) {
-            Some(inner) => Some(Self(inner)),
-            None => None,
-        }
     }
 
     /// Creates an `i24` from a 32-bit signed integer.
@@ -330,7 +289,7 @@ impl i24 {
     pub fn checked_add(self, other: Self) -> Option<Self> {
         self.to_i32()
             .checked_add(other.to_i32())
-            .and_then(Self::from_i32)
+            .and_then(Self::try_from_i32)
     }
 
     /// Performs checked subtraction.
@@ -345,7 +304,7 @@ impl i24 {
     pub fn checked_sub(self, other: Self) -> Option<Self> {
         self.to_i32()
             .checked_sub(other.to_i32())
-            .and_then(Self::from_i32)
+            .and_then(Self::try_from_i32)
     }
 
     /// Performs checked multiplication.
@@ -360,7 +319,7 @@ impl i24 {
     pub fn checked_mul(self, other: Self) -> Option<Self> {
         self.to_i32()
             .checked_mul(other.to_i32())
-            .and_then(Self::from_i32)
+            .and_then(Self::try_from_i32)
     }
 
     /// Performs checked division.
@@ -375,7 +334,7 @@ impl i24 {
     pub fn checked_div(self, other: Self) -> Option<Self> {
         self.to_i32()
             .checked_div(other.to_i32())
-            .and_then(Self::from_i32)
+            .and_then(Self::try_from_i32)
     }
 
     /// Performs checked integer remainder.
@@ -390,8 +349,70 @@ impl i24 {
     pub fn checked_rem(self, other: Self) -> Option<Self> {
         self.to_i32()
             .checked_rem(other.to_i32())
-            .and_then(Self::from_i32)
+            .and_then(Self::try_from_i32)
     }
+}
+
+type TryFromIntError = <i8 as TryFrom<i64>>::Error;
+
+fn out_of_range() -> TryFromIntError {
+    i8::try_from(i64::MIN).unwrap_err()
+}
+
+macro_rules! impl_from {
+    ($($ty: ty : $func_name: ident),+ $(,)?) => {$(
+        impl From<$ty> for i24 {
+            fn from(value: $ty) -> Self {
+                Self::$func_name(value)
+            }
+        }
+        
+        impl i24 {
+            pub const fn $func_name(value: $ty) -> Self {
+                Self(I24Repr::$func_name(value))
+            }
+        }
+    )+};
+}
+
+macro_rules! impl_try {
+    ($($ty: ty : $func_name: ident),+ $(,)?) => {$(
+        impl TryFrom<$ty> for i24 {
+            type Error = TryFromIntError;
+            
+            fn try_from(value: $ty) -> Result<Self, Self::Error> {
+                Self::$func_name(value).ok_or_else(out_of_range)
+            }
+        }
+        
+        impl i24 {
+            pub const fn $func_name(value: $ty) -> Option<Self> {
+                match I24Repr::$func_name(value) {
+                    Some(x) => Some(Self(x)),
+                    None => None
+                }
+            }
+        }
+    )+};
+}
+
+impl_from! {
+    u8: from_u8,
+    u16: from_u16,
+    bool: from_bool,
+    
+    i8: from_i8,
+    i16: from_i16,
+}
+
+impl_try! {
+    u32 : try_from_u32,
+    u64 : try_from_u64,
+    u128: try_from_u128,
+    
+    i32 : try_from_i32,
+    i64 : try_from_i64,
+    i128: try_from_i128,
 }
 
 impl One for i24 {
@@ -412,23 +433,46 @@ impl Zero for i24 {
     }
 }
 
+// TODO: fixme make const when https://github.com/rust-lang/rust/pull/124941
+//       or const_int_from_str gets stabilized
+pub fn from_str_error(bad_val: &str) -> ParseIntError {
+    #[allow(clippy::from_str_radix_10)]
+    match i8::from_str_radix(bad_val, 10) {
+        Err(err) => err,
+        Ok(_) => unreachable!(),
+    }
+}
+
+pub fn positive_overflow() -> ParseIntError {
+    from_str_error("9999999999999999999999999999999999999999")
+}
+
+pub fn negative_overflow() -> ParseIntError {
+    from_str_error("-9999999999999999999999999999999999999999")
+}
+
 macro_rules! from_str {
     ($meth: ident($($args: tt)*)) => {
         i32::$meth($($args)*)
-            .map_err(ParseI24Error::ParseError)
-            .and_then(|x| i24::from_i32(x).ok_or(ParseI24Error::OutOfRange))
+            .and_then(|x| i24::try_from_i32(x).ok_or_else(|| {
+                if x < 0 {
+                    negative_overflow()
+                } else {
+                    positive_overflow()
+                }
+            }))
     };
 }
 
 impl Num for i24 {
-    type FromStrRadixErr = ParseI24Error;
+    type FromStrRadixErr = ParseIntError;
     fn from_str_radix(str: &str, radix: u32) -> Result<Self, Self::FromStrRadixErr> {
         from_str!(from_str_radix(str, radix))
     }
 }
 
 impl FromStr for i24 {
-    type Err = ParseI24Error;
+    type Err = ParseIntError;
 
     fn from_str(str: &str) -> Result<Self, Self::Err> {
         from_str!(from_str(str))
@@ -662,7 +706,7 @@ impl Hash for i24 {
     {
         // i24 is repr(transparent)
         I24Repr::hash_slice(
-            unsafe { std::mem::transmute::<&[Self], &[I24Repr]>(data) },
+            unsafe { core::mem::transmute::<&[Self], &[I24Repr]>(data) },
             state,
         )
     }
@@ -670,7 +714,11 @@ impl Hash for i24 {
 
 #[cfg(test)]
 mod i24_tests {
+    extern crate std;
+
     use super::*;
+    use std::format;
+    use std::num::IntErrorKind;
 
     #[test]
     fn test_arithmetic_operations() {
@@ -762,36 +810,35 @@ mod i24_tests {
     fn test_from_bytes() {
         let le = i24!(0x030201);
         let be = i24!(0x010203);
-        assert_eq!(i24::from_ne_bytes([0x01, 0x02, 0x03]), if cfg!(target_endian = "big") { be } else { le });
+        assert_eq!(
+            i24::from_ne_bytes([0x01, 0x02, 0x03]),
+            if cfg!(target_endian = "big") { be } else { le }
+        );
         assert_eq!(i24::from_le_bytes([0x01, 0x02, 0x03]), le);
         assert_eq!(i24::from_be_bytes([0x01, 0x02, 0x03]), be);
     }
 
     #[test]
     fn test_zero_and_one() {
+        assert_eq!(i24::zero(), i24::try_from_i32(0).unwrap());
+        
         assert_eq!(i24::zero(), i24!(0));
         assert_eq!(i24::one(), i24!(1));
     }
-    
+
     #[test]
     fn test_from_str() {
         assert_eq!(i24::from_str("100").unwrap(), i24!(100));
         assert_eq!(i24::from_str("-100").unwrap(), i24!(-100));
+        assert_eq!(i24::from_str(&format!("{}", i24::MAX)).unwrap(), i24::MAX);
+        assert_eq!(i24::from_str(&format!("{}", i24::MIN)).unwrap(), i24::MIN);
         assert_eq!(
-            i24::from_str(&format!("{}", i24::MAX)).unwrap(),
-            i24::MAX
+            *i24::from_str("8388608").unwrap_err().kind(),
+            IntErrorKind::PosOverflow
         );
         assert_eq!(
-            i24::from_str(&format!("{}", i24::MIN)).unwrap(),
-            i24::MIN
-        );
-        assert_eq!(
-            i24::from_str("8388608").unwrap_err(),
-            ParseI24Error::OutOfRange
-        );
-        assert_eq!(
-            i24::from_str("-8388609").unwrap_err(),
-            ParseI24Error::OutOfRange
+            *i24::from_str("-8388609").unwrap_err().kind(),
+            IntErrorKind::NegOverflow
         );
     }
 
@@ -856,12 +903,48 @@ mod i24_tests {
         assert_eq!(c << 2, i24!(-4)); // 0xFFFFFC
         assert_eq!(c << 3, i24!(-8)); // 0xFFFFF8
     }
-    
+
     #[test]
     fn test_to_from_i32() {
         for i in I24Repr::MIN..=I24Repr::MAX {
-            assert_eq!(i24::from_i32(i).unwrap().to_i32(), i)
+            assert_eq!(i24::try_from_i32(i).unwrap().to_i32(), i)
         }
+    }
+
+    #[test]
+    fn test_from() {
+        macro_rules! impl_t {
+            ($($ty: ty),+) => {{$(
+                for x in <$ty>::MIN..=<$ty>::MAX {
+                    assert_eq!(<$ty>::try_from(i24::from(x).to_i32()).unwrap(), x)
+                }
+            )+}};
+        }
+        
+        assert_eq!(i24::from(true), i24::one());
+        assert_eq!(i24::from(false), i24::zero());
+        
+        impl_t!(i8, i16, u8, u16)
+    }
+
+    #[test]
+    fn test_try_from() {
+        macro_rules! impl_t {
+            (signed $($ty: ty),+) => {{$(
+                for x in I24Repr::MIN..=I24Repr::MAX {
+                    assert_eq!(i24::try_from(<$ty>::from(x)).unwrap().to_i32(), x)
+                }
+            )+}};
+            
+            (unsigned $($ty: ty),+) => {{$(
+                for x in 0..=I24Repr::MAX {
+                    assert_eq!(i24::try_from(<$ty>::try_from(x).unwrap()).unwrap().to_i32(), x)
+                }
+            )+}};
+        }
+
+        impl_t!(signed i32, i64, i128);
+        impl_t!(unsigned u32, u64, u128);
     }
 
     #[test]
