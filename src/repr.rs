@@ -278,7 +278,7 @@ macro_rules! impl_infallible_signed {
                 // this seems like the implementation with the best code gen
                 // https://rust.godbolt.org/z/eThE5n9s1 -> from_i16_3
 
-                // x as u32 sign extends in accord to the refrence (https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions)
+                // `x as u32` sign extends in accord to the refrence (https://doc.rust-lang.org/reference/expressions/operator-expr.html#type-cast-expressions)
                 // if positive this would be just the exact same number
                 // if negative the sign extention is done for us and all we have to do
                 // is zero out the high byte
