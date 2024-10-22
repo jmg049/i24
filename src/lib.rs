@@ -433,8 +433,7 @@ impl Zero for i24 {
     }
 }
 
-// TODO: fixme make const when https://github.com/rust-lang/rust/pull/124941
-//       or const_int_from_str gets stabilized
+
 pub const fn from_str_error(bad_val: &str) -> ParseIntError {
     match i8::from_str_radix(bad_val, 10) {
         Err(err) => err,
