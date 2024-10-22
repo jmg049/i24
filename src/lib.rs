@@ -443,11 +443,11 @@ pub const fn from_str_error(bad_val: &str) -> ParseIntError {
 }
 
 pub const fn positive_overflow() -> ParseIntError {
-    from_str_error("9999999999999999999999999999999999999999")
+    const { from_str_error("9999999999999999999999999999999999999999") }
 }
 
 pub const fn negative_overflow() -> ParseIntError {
-    from_str_error("-9999999999999999999999999999999999999999")
+    const { from_str_error("-9999999999999999999999999999999999999999") }
 }
 
 macro_rules! from_str {

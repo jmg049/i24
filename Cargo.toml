@@ -10,8 +10,8 @@ documentation = "https://docs.rs/i24"
 categories = ["data-structures", "mathematics", "encoding"]
 
 [dependencies]
-bytemuck = "1.16.1"
-num-traits = "0.2.19"
+bytemuck = "1"
+num-traits = "0.2"
 
 pyo3 = { version = "0.21.2", features = ["extension-module"], optional = true }
 numpy = { version = "0.21.0", optional = true }
