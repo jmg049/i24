@@ -433,22 +433,20 @@ impl Zero for i24 {
     }
 }
 
-// TODO: fixme make const when https://github.com/rust-lang/rust/pull/124941
-//       or const_int_from_str gets stabilized
-pub fn from_str_error(bad_val: &str) -> ParseIntError {
-    #[allow(clippy::from_str_radix_10)]
+
+pub const fn from_str_error(bad_val: &str) -> ParseIntError {
     match i8::from_str_radix(bad_val, 10) {
         Err(err) => err,
         Ok(_) => unreachable!(),
     }
 }
 
-pub fn positive_overflow() -> ParseIntError {
-    from_str_error("9999999999999999999999999999999999999999")
+pub const fn positive_overflow() -> ParseIntError {
+    const { from_str_error("9999999999999999999999999999999999999999") }
 }
 
-pub fn negative_overflow() -> ParseIntError {
-    from_str_error("-9999999999999999999999999999999999999999")
+pub const fn negative_overflow() -> ParseIntError {
+    const { from_str_error("-9999999999999999999999999999999999999999") }
 }
 
 macro_rules! from_str {
@@ -456,9 +454,9 @@ macro_rules! from_str {
         i32::$meth($($args)*)
             .and_then(|x| i24::try_from_i32(x).ok_or_else(|| {
                 if x < 0 {
-                    negative_overflow()
+                    const { negative_overflow() }
                 } else {
-                    positive_overflow()
+                    const { positive_overflow() }
                 }
             }))
     };
