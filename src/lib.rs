@@ -195,6 +195,22 @@ impl i24 {
         Self(I24Repr::wrapping_from_i32(n))
     }
 
+    /// Creates an `i24` from a 32-bit signed integer.
+    ///
+    /// This method saturates the input if it's outside the valid range.
+    ///
+    /// # Arguments
+    ///
+    /// * `n` - The 32-bit signed integer to convert.
+    ///
+    /// # Returns
+    ///
+    /// An `i24` instance representing the input value.
+    #[inline(always)]
+    pub const fn saturating_from_i32(n: i32) -> Self {
+        Self(I24Repr::saturating_from_i32(n))
+    }
+
     /// Reverses the byte order of the integer.
     #[inline(always)]
     pub const fn swap_bytes(self) -> Self {
