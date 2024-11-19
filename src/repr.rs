@@ -58,35 +58,35 @@ compile_error!("unknown endianness");
 impl I24Repr {
     pub(super) const MAX: i32 = (1 << 23) - 1;
     pub(super) const MIN: i32 = -(1 << 23);
-
-    pub(super) const SIGN_EXTEND: u32 = 0xFF000000;
-    pub(super) const SIGN_BIT: u32 = 0x800000;
     pub(super) const BITS_MASK: u32 = 0xFFFFFF;
 
     #[inline]
     pub const fn to_i32(self) -> i32 {
-        let mut value = self.to_bits();
-        if value & Self::SIGN_BIT != 0 {
-            value |= Self::SIGN_EXTEND
-        }
-        value as i32
+        ((self.to_bits() as i32) << 8) >> 8
     }
 
     #[inline]
     pub const fn wrapping_from_i32(value: i32) -> Self {
-        let proper_i24 = (value as u32 & Self::BITS_MASK)
-            | if value < 0 && value >= Self::MIN {
-                Self::SIGN_BIT
-            } else {
-                0
-            };
-
-        debug_assert!((proper_i24 & Self::BITS_MASK) == proper_i24);
+        let proper_i24 = value as u32 & Self::BITS_MASK;
 
         // Safety: we only use the first 24 least significant bits (i.e 3 bytes) of the value,
         // and the most significant byte is set to zero
         // therefore layout guarantees hold true
         unsafe { Self::from_bits(proper_i24) }
+    }
+
+    #[inline]
+    pub const fn saturating_from_i32(value: i32) -> Self {
+        // Safety: we only use the first 24 least significant bits (i.e 3 bytes) of the value,
+        // and the most significant byte is set to zero
+        // therefore layout guarantees hold true
+        if value > Self::MAX {
+            const { Self::wrapping_from_i32(Self::MAX) }
+        } else if value < Self::MIN {
+            const { Self::wrapping_from_i32(Self::MIN) }
+        } else {
+            unsafe { Self::from_bits(value as u32) }
+        }
     }
 
     #[inline(always)]
