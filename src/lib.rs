@@ -709,6 +709,66 @@ impl_bits_fmt! {
     impl fmt::Binary
 }
 
+#[cfg(feature = "serde")]
+impl serde::Serialize for i24 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        serializer.serialize_i32(self.to_i32())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for i24 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de> {
+        deserializer.deserialize_i32(I24Visitor)
+    }
+}
+
+#[cfg(feature = "serde")]
+struct I24Visitor;
+
+#[cfg(feature = "serde")]
+impl<'de> serde::de::Visitor<'de> for I24Visitor {
+    type Value = crate::i24;
+
+    fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+        formatter.write_str("an integer between -2^23 and 2^23")
+    }
+
+    fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error, {
+        Ok(v.into())
+    }
+
+    fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error, {
+        Ok(v.into())
+    }
+
+    fn visit_i16<E>(self, v: i16) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error, {
+        Ok(v.into())
+    }
+
+    fn visit_u16<E>(self, v: u16) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error, {
+        Ok(v.into())
+    }
+
+    fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error, {
+        v.try_into().map_err(|_| E::custom("i24 out of range!"))
+    }
+}
+
 impl Hash for i24 {
     fn hash<H: Hasher>(&self, state: &mut H) {
         I24Repr::hash(&self.0, state)
