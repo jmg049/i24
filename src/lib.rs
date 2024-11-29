@@ -710,62 +710,63 @@ impl_bits_fmt! {
 }
 
 #[cfg(feature = "serde")]
-impl serde::Serialize for i24 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer {
-        serializer.serialize_i32(self.to_i32())
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for i24 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de> {
-        deserializer.deserialize_i32(I24Visitor)
-    }
-}
-
-#[cfg(feature = "serde")]
-struct I24Visitor;
-
-#[cfg(feature = "serde")]
-impl<'de> serde::de::Visitor<'de> for I24Visitor {
-    type Value = crate::i24;
-
-    fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
-        formatter.write_str("an integer between -2^23 and 2^23")
-    }
-
-    fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
+mod serde {
+    impl serde::Serialize for crate::i24 {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
-            E: serde::de::Error, {
-        Ok(v.into())
+            S: serde::Serializer {
+            serializer.serialize_i32(self.to_i32())
+        }
     }
 
-    fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E>
+    impl<'de> serde::Deserialize<'de> for crate::i24 {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
-            E: serde::de::Error, {
-        Ok(v.into())
+            D: serde::Deserializer<'de> {
+            deserializer.deserialize_any(I24Visitor)
+        }
     }
 
-    fn visit_i16<E>(self, v: i16) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error, {
-        Ok(v.into())
+    struct I24Visitor;
+
+    macro_rules! impl_deserialize_infallible {
+        ($([$ty: path, $visit: ident, $from: ident])+) => {$(
+            fn $visit<E>(self, v: $ty) -> Result<Self::Value, E> {
+                Ok(crate::i24::$from(v))
+            }
+        )*};
     }
 
-    fn visit_u16<E>(self, v: u16) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error, {
-        Ok(v.into())
+    macro_rules! impl_deserialize_fallible {
+        ($([$ty: path, $visit: ident, $try_from: ident])+) => {$(
+            fn $visit<E>(self, v: $ty) -> Result<Self::Value, E> where E: serde::de::Error {
+                crate::i24::$try_from(v).ok_or_else(|| E::custom("i24 out of range!"))
+            }
+        )*};
     }
 
-    fn visit_i32<E>(self, v: i32) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error, {
-        v.try_into().map_err(|_| E::custom("i24 out of range!"))
+    impl serde::de::Visitor<'_> for I24Visitor {
+        type Value = crate::i24;
+
+        fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+            formatter.write_str("an integer between -2^23 and 2^23")
+        }
+
+        impl_deserialize_infallible! {
+            [u8, visit_u8, from_u8]
+            [i8, visit_i8, from_i8]
+            [u16, visit_u16, from_u16]
+            [i16, visit_i16, from_i16]
+        }
+
+        impl_deserialize_fallible! {
+            [u32, visit_u32, try_from_u32]
+            [i32, visit_i32, try_from_i32]
+            [u64, visit_u64, try_from_u64]
+            [i64, visit_i64, try_from_i64]
+            [u128, visit_u128, try_from_u128]
+            [i128, visit_i128, try_from_i128]
+        }
     }
 }
 
@@ -1026,5 +1027,32 @@ mod i24_tests {
         for i in 0..(1 << 24) {
             assert_eq!(i24::from_bits_truncate(i).to_bits(), i)
         }
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_deserialize_json() {
+        #[derive(Debug, PartialEq, ::serde::Deserialize)]
+        struct TestStruct {
+            value: i24
+        }
+
+        let test: TestStruct = serde_json::from_str("{ \"value\": 11 }").expect("Failed to deserialize!");
+        let expected = TestStruct { value: i24::from_u8(11) };
+
+        assert_eq!(test, expected);
+    }
+
+    #[test]
+    #[cfg(feature = "serde")]
+    fn test_serialize_json() {
+        #[derive(Debug, PartialEq, ::serde::Serialize)]
+        struct TestStruct {
+            value: i24
+        }
+
+        let test_struct = TestStruct { value: i24::from_u8(11) };
+        let test = serde_json::to_string(&test_struct).expect("Failed to serialize!");
+        assert_eq!(test, "{\"value\":11}");
     }
 }
