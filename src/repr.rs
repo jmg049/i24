@@ -1,4 +1,4 @@
-use bytemuck::{NoUninit, Zeroable};
+use bytemuck::{NoUninit, Pod, Zeroable};
 use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
 
@@ -44,10 +44,10 @@ const _: () =
     assert!(align_of::<u32>() == align_of::<I24Repr>() && size_of::<u32>() == size_of::<I24Repr>());
 
 // Safety: I24Repr is laid out in memory as a `u32` with the most significant byte set to zero
-unsafe impl NoUninit for I24Repr {}
-
-// Safety: I24Repr is laid out in memory as a `u32` with the most significant byte set to zero
 unsafe impl Zeroable for I24Repr {}
+
+// Safety: I24 repr is laid out in memory as a `u32` with the most significant byte set to zero
+unsafe impl Pod for I24Repr {}
 
 #[cfg(any(
     all(target_endian = "little", target_endian = "big"),

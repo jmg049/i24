@@ -63,7 +63,7 @@
 //! This project is licensed under MIT - see the [LICENSE](https://github.com/jmg049/i24/blob/main/LICENSE) file for details.
 
 use crate::repr::I24Repr;
-use bytemuck::{NoUninit, Zeroable};
+use bytemuck::{Pod, Zeroable};
 use core::fmt;
 use core::fmt::{Debug, Display, LowerHex, Octal, UpperHex};
 use core::hash::{Hash, Hasher};
@@ -106,7 +106,7 @@ pub struct i24(I24Repr);
 unsafe impl Zeroable for i24 where I24Repr: Zeroable {}
 
 // Safety: repr(transparent) and so if I24Repr is NoUninit so should i24 be
-unsafe impl NoUninit for i24 where I24Repr: NoUninit {}
+unsafe impl Pod for i24 where I24Repr: Pod {}
 
 #[doc(hidden)]
 pub mod __macros__ {
@@ -382,7 +382,7 @@ macro_rules! impl_from {
                 Self::$func_name(value)
             }
         }
-        
+
         impl i24 {
             pub const fn $func_name(value: $ty) -> Self {
                 Self(I24Repr::$func_name(value))
@@ -395,12 +395,12 @@ macro_rules! impl_try {
     ($($ty: ty : $func_name: ident),+ $(,)?) => {$(
         impl TryFrom<$ty> for i24 {
             type Error = TryFromIntError;
-            
+
             fn try_from(value: $ty) -> Result<Self, Self::Error> {
                 Self::$func_name(value).ok_or_else(out_of_range)
             }
         }
-        
+
         impl i24 {
             pub const fn $func_name(value: $ty) -> Option<Self> {
                 match I24Repr::$func_name(value) {
@@ -416,7 +416,7 @@ impl_from! {
     u8: from_u8,
     u16: from_u16,
     bool: from_bool,
-    
+
     i8: from_i8,
     i16: from_i16,
 }
@@ -425,7 +425,7 @@ impl_try! {
     u32 : try_from_u32,
     u64 : try_from_u64,
     u128: try_from_u128,
-    
+
     i32 : try_from_i32,
     i64 : try_from_i64,
     i128: try_from_i128,
@@ -448,7 +448,6 @@ impl Zero for i24 {
         Self::zeroed() == *self
     }
 }
-
 
 pub const fn from_str_error(bad_val: &str) -> ParseIntError {
     match i8::from_str_radix(bad_val, 10) {
@@ -714,7 +713,8 @@ mod serde {
     impl serde::Serialize for crate::i24 {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
-            S: serde::Serializer {
+            S: serde::Serializer,
+        {
             serializer.serialize_i32(self.to_i32())
         }
     }
@@ -722,7 +722,8 @@ mod serde {
     impl<'de> serde::Deserialize<'de> for crate::i24 {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
-            D: serde::Deserializer<'de> {
+            D: serde::Deserializer<'de>,
+        {
             deserializer.deserialize_any(I24Visitor)
         }
     }
@@ -896,7 +897,7 @@ mod i24_tests {
     #[test]
     fn test_zero_and_one() {
         assert_eq!(i24::zero(), i24::try_from_i32(0).unwrap());
-        
+
         assert_eq!(i24::zero(), i24!(0));
         assert_eq!(i24::one(), i24!(1));
     }
@@ -995,10 +996,10 @@ mod i24_tests {
                 }
             )+}};
         }
-        
+
         assert_eq!(i24::from(true), i24::one());
         assert_eq!(i24::from(false), i24::zero());
-        
+
         impl_t!(i8, i16, u8, u16)
     }
 
@@ -1010,7 +1011,7 @@ mod i24_tests {
                     assert_eq!(i24::try_from(<$ty>::from(x)).unwrap().to_i32(), x)
                 }
             )+}};
-            
+
             (unsigned $($ty: ty),+) => {{$(
                 for x in 0..=I24Repr::MAX {
                     assert_eq!(i24::try_from(<$ty>::try_from(x).unwrap()).unwrap().to_i32(), x)
@@ -1034,11 +1035,14 @@ mod i24_tests {
     fn test_deserialize_json() {
         #[derive(Debug, PartialEq, ::serde::Deserialize)]
         struct TestStruct {
-            value: i24
+            value: i24,
         }
 
-        let test: TestStruct = serde_json::from_str("{ \"value\": 11 }").expect("Failed to deserialize!");
-        let expected = TestStruct { value: i24::from_u8(11) };
+        let test: TestStruct =
+            serde_json::from_str("{ \"value\": 11 }").expect("Failed to deserialize!");
+        let expected = TestStruct {
+            value: i24::from_u8(11),
+        };
 
         assert_eq!(test, expected);
     }
@@ -1048,10 +1052,12 @@ mod i24_tests {
     fn test_serialize_json() {
         #[derive(Debug, PartialEq, ::serde::Serialize)]
         struct TestStruct {
-            value: i24
+            value: i24,
         }
 
-        let test_struct = TestStruct { value: i24::from_u8(11) };
+        let test_struct = TestStruct {
+            value: i24::from_u8(11),
+        };
         let test = serde_json::to_string(&test_struct).expect("Failed to serialize!");
         assert_eq!(test, "{\"value\":11}");
     }
