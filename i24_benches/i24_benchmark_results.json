@@ -1,0 +1,200 @@
+{
+  "timestamp": "2025-04-29T12:16:37.682921433+01:00",
+  "system_info": {
+    "cpu_info": "24 cores",
+    "memory_mb": 64136,
+    "os": "Linux 6.11.0-24-generic",
+    "rust_version": "1.85.0"
+  },
+  "results": [
+    {
+      "operation": "Addition",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 369,
+      "throughput": 2.710026829268293e16
+    },
+    {
+      "operation": "Addition",
+      "operand_type": "i32",
+      "iterations": 1000,
+      "duration_ns": 231,
+      "throughput": 4.329003896103896e16
+    },
+    {
+      "operation": "Subtraction",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 226,
+      "throughput": 4.42477831858407e16
+    },
+    {
+      "operation": "Subtraction",
+      "operand_type": "i32",
+      "iterations": 1000,
+      "duration_ns": 239,
+      "throughput": 4.1841e16
+    },
+    {
+      "operation": "Multiplication",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 230,
+      "throughput": 4.347825652173913e16
+    },
+    {
+      "operation": "Multiplication",
+      "operand_type": "i32",
+      "iterations": 1000,
+      "duration_ns": 233,
+      "throughput": 4.2918450643776824e16
+    },
+    {
+      "operation": "Division",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 4862927833,
+      "throughput": 2056374131.67838
+    },
+    {
+      "operation": "Division",
+      "operand_type": "i32",
+      "iterations": 1000,
+      "duration_ns": 4877731213,
+      "throughput": 2050133261.412246
+    },
+    {
+      "operation": "Remainder",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 11577521136,
+      "throughput": 863742668.4461205
+    },
+    {
+      "operation": "Remainder",
+      "operand_type": "i32",
+      "iterations": 1000,
+      "duration_ns": 4042289779,
+      "throughput": 2473845158.7391753
+    },
+    {
+      "operation": "BitAnd",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 234,
+      "throughput": 4.273503846153846e16
+    },
+    {
+      "operation": "BitAnd",
+      "operand_type": "i32",
+      "iterations": 1000,
+      "duration_ns": 226,
+      "throughput": 4.42477831858407e16
+    },
+    {
+      "operation": "BitOr",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 226,
+      "throughput": 4.42477831858407e16
+    },
+    {
+      "operation": "BitOr",
+      "operand_type": "i32",
+      "iterations": 1000,
+      "duration_ns": 225,
+      "throughput": 4.444444e16
+    },
+    {
+      "operation": "BitXor",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 226,
+      "throughput": 4.42477831858407e16
+    },
+    {
+      "operation": "BitXor",
+      "operand_type": "i32",
+      "iterations": 1000,
+      "duration_ns": 225,
+      "throughput": 4.444444e16
+    },
+    {
+      "operation": "LeftShift",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 17,
+      "throughput": 5.882352941176471e17
+    },
+    {
+      "operation": "LeftShift",
+      "operand_type": "i32",
+      "iterations": 1000,
+      "duration_ns": 19,
+      "throughput": 5.2631578947368416e17
+    },
+    {
+      "operation": "RightShift",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 20,
+      "throughput": 5e17
+    },
+    {
+      "operation": "RightShift",
+      "operand_type": "i32",
+      "iterations": 1000,
+      "duration_ns": 18,
+      "throughput": 5.555555555555556e17
+    },
+    {
+      "operation": "Negation",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 17,
+      "throughput": 5.882352941176471e17
+    },
+    {
+      "operation": "Negation",
+      "operand_type": "i32",
+      "iterations": 1000,
+      "duration_ns": 15,
+      "throughput": 6.666666666666668e17
+    },
+    {
+      "operation": "BitwiseNot",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 16,
+      "throughput": 6.25e17
+    },
+    {
+      "operation": "BitwiseNot",
+      "operand_type": "i32",
+      "iterations": 1000,
+      "duration_ns": 17,
+      "throughput": 5.882352941176471e17
+    },
+    {
+      "operation": "ToI32",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 19,
+      "throughput": 5.2631578947368416e17
+    },
+    {
+      "operation": "FromI32",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 15,
+      "throughput": 6.666666666666668e17
+    },
+    {
+      "operation": "ByteConversion",
+      "operand_type": "i24",
+      "iterations": 1000,
+      "duration_ns": 15,
+      "throughput": 6.666666666666668e17
+    }
+  ]
+}

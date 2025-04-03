@@ -61,6 +61,10 @@
 //! ## License
 //!
 //! This project is licensed under MIT - see the [LICENSE](https://github.com/jmg049/i24/blob/main/LICENSE) file for details.
+//!
+//! ## Benchmarks
+//! See the [benchmark report](https://github.com/jmg049/i24/i24_benches/benchmark_analysis/benchmark_report.md).
+//!
 
 use crate::repr::I24Repr;
 use bytemuck::{Pod, Zeroable};
@@ -76,10 +80,13 @@ use core::{
     ops::{Neg, Not},
     str::FromStr,
 };
-use num_traits::{Num, One, Zero};
+use num_traits::{Num, One, ToBytes, Zero};
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
+
+#[cfg(feature = "pyo3")]
+use numpy::PyArrayDescr;
 
 #[cfg(feature = "std")]
 extern crate std;
@@ -492,15 +499,6 @@ impl FromStr for i24 {
     }
 }
 
-#[cfg(feature = "pyo3")]
-unsafe impl numpy::Element for i24 {
-    const IS_COPY: bool = true;
-
-    fn get_dtype_bound(py: Python<'_>) -> Bound<'_, numpy::PyArrayDescr> {
-        numpy::dtype_bound::<i24>(py)
-    }
-}
-
 macro_rules! impl_bin_op {
     ($(impl $op: ident = $assign: ident $assign_fn: ident { $($impl: tt)* })+) => {$(
         impl_bin_op!(impl $op = $assign $assign_fn for i24 { $($impl)* });
@@ -785,6 +783,48 @@ impl Hash for i24 {
             unsafe { core::mem::transmute::<&[Self], &[I24Repr]>(data) },
             state,
         )
+    }
+}
+
+impl ToBytes for i24 {
+    type Bytes = [u8; 3];
+
+    fn to_be_bytes(&self) -> Self::Bytes {
+        self.0.to_be_bytes()
+    }
+
+    fn to_le_bytes(&self) -> Self::Bytes {
+        self.0.to_le_bytes()
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pyclass(name = "I24")]
+pub struct PyI24 {
+    pub value: i24,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymodule(name = "i24")]
+fn pyi24(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<PyI24>()?;
+    Ok(())
+}
+
+#[cfg(feature = "pyo3")]
+unsafe impl numpy::Element for i24 {
+    const IS_COPY: bool = true;
+
+    fn get_dtype_bound(py: Python<'_>) -> Bound<'_, numpy::PyArrayDescr> {
+        numpy::dtype::<i24>(py)
+    }
+
+    fn clone_ref(&self, _py: Python<'_>) -> Self {
+        self.clone()
+    }
+
+    fn get_dtype(py: Python<'_>) -> Bound<'_, PyArrayDescr> {
+        numpy::dtype::<i24>(py)
     }
 }
 
