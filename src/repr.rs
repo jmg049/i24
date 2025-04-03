@@ -1,4 +1,4 @@
-use bytemuck::{NoUninit, Zeroable};
+use bytemuck::{AnyBitPattern, NoUninit, Zeroable};
 use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
 
@@ -48,6 +48,8 @@ unsafe impl NoUninit for I24Repr {}
 
 // Safety: I24Repr is laid out in memory as a `u32` with the most significant byte set to zero
 unsafe impl Zeroable for I24Repr {}
+
+unsafe impl AnyBitPattern for I24Repr {}
 
 #[cfg(any(
     all(target_endian = "little", target_endian = "big"),

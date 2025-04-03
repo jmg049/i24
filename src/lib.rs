@@ -63,7 +63,7 @@
 //! This project is licensed under MIT - see the [LICENSE](https://github.com/jmg049/i24/blob/main/LICENSE) file for details.
 
 use crate::repr::I24Repr;
-use bytemuck::{NoUninit, Zeroable};
+use bytemuck::{AnyBitPattern, NoUninit, Zeroable};
 use core::fmt;
 use core::fmt::{Debug, Display, LowerHex, Octal, UpperHex};
 use core::hash::{Hash, Hasher};
@@ -107,6 +107,8 @@ unsafe impl Zeroable for i24 where I24Repr: Zeroable {}
 
 // Safety: repr(transparent) and so if I24Repr is NoUninit so should i24 be
 unsafe impl NoUninit for i24 where I24Repr: NoUninit {}
+
+unsafe impl bytemuck::AnyBitPattern for i24 where I24Repr: AnyBitPattern {}
 
 #[doc(hidden)]
 pub mod __macros__ {
