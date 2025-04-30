@@ -1,10 +1,10 @@
-use bytemuck::{NoUninit, Pod, Zeroable};
+use bytemuck::{NoUninit, Zeroable};
 use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
 
 #[derive(Debug, Copy, Clone)]
 #[repr(u8)]
-enum ZeroByte {
+pub(crate) enum ZeroByte {
     Zero = 0,
 }
 
@@ -18,20 +18,51 @@ unsafe impl NoUninit for ZeroByte {}
 // in fact the only valid bit pattern is zero
 unsafe impl Zeroable for ZeroByte {}
 
+#[cfg(feature = "alloc")]
+/// Internal packed 3-byte representation of an [`crate::i24`] value used for zero-copy deserialization.
+///
+/// This struct is used internally in conjunction with [`bytemuck::cast_slice`] to reinterpret
+/// `[u8]` data as a sequence of 24-bit signed integers.
+///
+/// # Safety
+///
+/// - It is `#[repr(C, packed)]` and consists of only `[u8; 3]`
+/// - Implements `NoUninit` and `AnyBitPattern`, making it safe for binary reinterpretation
+/// - Not exposed publicly — intended only for internal buffer conversions
+#[repr(C, packed)]
+#[derive(Copy, Clone)]
+pub(crate) struct DiskI24 {
+    pub(crate) bytes: [u8; 3],
+}
+#[cfg(feature = "alloc")]
+/// Safety: all zeros is a valid value for DiskI24
+unsafe impl bytemuck::Zeroable for DiskI24 {}
+// Safety: No padding, all fields are u8s
+
+#[cfg(feature = "alloc")]
+/// Safety: DiskI24 is a packed struct with no padding
+/// Any 3 bytes can be interpreted as a valid DiskI24
+unsafe impl bytemuck::AnyBitPattern for DiskI24 {}
+
+#[cfg(feature = "alloc")]
+/// Safety: DiskI24 is a packed struct with no padding
+/// Any 3 bytes can be interpreted as a valid DiskI24
+unsafe impl bytemuck::NoUninit for DiskI24 {}
+
 #[derive(Debug, Copy, Clone)]
 #[repr(C, align(4))]
 pub(super) struct BigEndianI24Repr {
     // most significant byte at the start
-    most_significant_byte: ZeroByte,
-    data: [u8; 3],
+    pub(crate) most_significant_byte: ZeroByte,
+    pub(crate) data: [u8; 3],
 }
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C, align(4))]
 pub(super) struct LittleEndianI24Repr {
-    data: [u8; 3],
+    pub(crate) data: [u8; 3],
     // most significant byte at the end
-    most_significant_byte: ZeroByte,
+    pub(crate) most_significant_byte: ZeroByte,
 }
 
 #[cfg(target_endian = "big")]
@@ -44,10 +75,12 @@ const _: () =
     assert!(align_of::<u32>() == align_of::<I24Repr>() && size_of::<u32>() == size_of::<I24Repr>());
 
 // Safety: I24Repr is laid out in memory as a `u32` with the most significant byte set to zero
+// Must be NoUninit due to the padding byte.
 unsafe impl Zeroable for I24Repr {}
 
-// Safety: I24 repr is laid out in memory as a `u32` with the most significant byte set to zero
-unsafe impl Pod for I24Repr {}
+// Safety: I24 repr is laid out in memory as a `u32` with the most significant byte set to zero.
+// Must be NoUninit due to the padding byte.
+unsafe impl NoUninit for I24Repr {}
 
 #[cfg(any(
     all(target_endian = "little", target_endian = "big"),
@@ -412,4 +445,37 @@ const _: () = {
 
     // test MIN
     assert!(unwrap!(I24Repr::try_from_i32(I24Repr::MAX)).to_i32() == I24Repr::MAX);
+};
+
+const _: () = {
+    // ZeroByte layout checks
+    assert!(size_of::<ZeroByte>() == 1, "ZeroByte should be 1 byte");
+    assert!(
+        align_of::<ZeroByte>() == 1,
+        "ZeroByte should have alignment 1"
+    );
+
+    // BigEndianI24Repr layout checks
+    assert!(
+        size_of::<BigEndianI24Repr>() == 4,
+        "BigEndianI24Repr should be 4 bytes"
+    );
+    assert!(
+        align_of::<BigEndianI24Repr>() == 4,
+        "BigEndianI24Repr should be aligned to 4"
+    );
+
+    // LittleEndianI24Repr layout checks
+    assert!(
+        size_of::<LittleEndianI24Repr>() == 4,
+        "LittleEndianI24Repr should be 4 bytes"
+    );
+    assert!(
+        align_of::<LittleEndianI24Repr>() == 4,
+        "LittleEndianI24Repr should be aligned to 4"
+    );
+
+    // I24Repr layout check (resolved depending on target endianness)
+    assert!(size_of::<I24Repr>() == 4, "I24Repr should be 4 bytes");
+    assert!(align_of::<I24Repr>() == 4, "I24Repr should be aligned to 4");
 };

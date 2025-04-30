@@ -24,7 +24,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! i24 = "2.0.0"
+//! i24 = "2.1.0"
 //! ```
 //!
 //! Then, in your Rust code:
@@ -38,8 +38,21 @@
 //! assert_eq!(c.to_i32(), 3000);
 //! assert_eq!(c, i24!(3000));
 //! ```
+//! The `i24!` macro allows you to create `i24` values at compile time, ensuring that the value is within the valid range.
 //!
-//! ## Safety and Limitations
+//! Then if working with 3-byte representations from disk or the network, you can use the `I24DiskMethods` trait to read and write `i24` slices of `i24`.
+//!
+//!  ```ignore
+//! use i24::I24DiskMethods; // Bring extension trait into scope
+//! use i24::i24 as I24; // Import the i24 type
+//! let raw_data: &[u8] = &[0x00, 0x01, 0x02, 0x00, 0x01, 0xFF]; // 2 values
+//! let values: Vec<I24> = I24::read_i24s_be(raw_data).expect("valid buffer");
+//!
+//! let encoded: Vec<u8> = I24::write_i24s_be(&values);
+//! assert_eq!(encoded, raw_data);
+//! ```
+//!
+//!  ## Safety and Limitations
 //!
 //! While `i24` strives to behave similarly to Rust's built-in integer types, there are some
 //! important considerations:
@@ -51,8 +64,13 @@
 //! Always use checked arithmetic operations when dealing with untrusted input or when
 //! overflow/underflow is a concern.
 //!
+//! 'i24' aligns with the safety requirements of bytemuck (NoUninit, Zeroable and bytemuck::AnyBitPattern), ensuring that it is safe to use for converting between valid bytes and a i24 value.
+//! Then when using the `I24DiskMethods` trait, it is safe to use (internally) the `bytemuck::cast_slice` function to convert between a slice of bytes and a slice of 'i24' values.
+//!
 //! ## Features
 //! - **pyo3**: Enables the pyo3 bindings for the `i24` type.
+//! - **serde**: Enables the `Serialize` and `Deserialize` traits for the `i24` type.
+//! - **alloc**: Enables the `I24DiskMethods` trait for the `i24` type.
 //!
 //! ## Contributing
 //!
@@ -67,7 +85,14 @@
 //!
 
 use crate::repr::I24Repr;
-use bytemuck::{Pod, Zeroable};
+use bytemuck::{NoUninit, Zeroable};
+
+#[cfg(feature = "alloc")]
+use repr::DiskI24;
+
+#[cfg(feature = "alloc")]
+use bytemuck::cast_slice;
+
 use core::fmt;
 use core::fmt::{Debug, Display, LowerHex, Octal, UpperHex};
 use core::hash::{Hash, Hasher};
@@ -97,23 +122,80 @@ mod repr;
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 #[cfg_attr(feature = "pyo3", pyclass)]
-/// An experimental 24-bit signed integer type.
+/// A signed 24-bit integer type.
 ///
-/// It should not be used anywhere important. It is still unverified and experimental.
+/// The `i24` type represents a 24-bit signed integer in two's complement format. It fills the gap between
+/// `i16` and `i32`, offering reduced memory usage while preserving a larger numeric range than `i16`.
 ///
-/// The type is not yet fully implemented and is not guaranteed to work.
-/// Supports basic arithmetic operations and conversions to and from ``i32``.
+/// This type is particularly suited to applications such as audio processing, binary file manipulation,
+/// embedded systems, or networking protocols where 24-bit integers are common.
 ///
-/// Represents a 24-bit signed integer.
+/// ## Range
 ///
-/// This structs layout is an unspecified implementation detail
+/// The valid value range is:
+///
+/// ```text
+///   MIN = -8_388_608   // -2^23
+///   MAX =  8_388_607   //  2^23 - 1
+/// ```
+///
+/// Arithmetic operations are implemented to match Rust’s standard integer behavior,
+/// including overflow and checked variants.
+///
+/// ## Memory Layout and Safety
+///
+/// `i24` is implemented as a `#[repr(transparent)]` wrapper around a 4-byte internal representation.
+/// Although the logical width is 24 bits, one additional byte is used for alignment and padding control.
+///
+/// This struct:
+///
+/// - Contains **no uninitialized or padding bytes**
+/// - Is **safe to use** with [`bytemuck::NoUninit`](https://docs.rs/bytemuck/latest/bytemuck/trait.NoUninit.html)
+/// - Can be cast safely with [`bytemuck::cast_slice`] for use in FFI and low-level applications
+///
+/// The layout is verified via compile-time assertions to ensure portability and correctness.
+///
+/// ## Binary Serialization
+///
+/// Although `i24` occupies 4 bytes in memory, binary formats (e.g., WAV files, network protocols) often
+/// store 24-bit integers in a 3-byte representation. To support this:
+///
+/// - `i24` provides [`from_be_bytes`], [`from_le_bytes`], and [`from_ne_bytes`] methods for constructing
+///   values from 3-byte on-disk representations
+/// - Corresponding [`to_be_bytes`], [`to_le_bytes`], and [`to_ne_bytes`] methods convert to 3-byte representations
+///
+/// For efficient bulk deserialization, use the [`I24DiskMethods`] extension trait.
+///
+///  Note: Requires the ``alloc`` feature to be enabled.
+///
+/// ```ignore
+/// use i24::I24DiskMethods;
+/// use i24::i24 as I24;
+/// let raw: &[u8] = &[0x00, 0x00, 0x01, 0xFF, 0xFF, 0xFF];
+/// let values = I24::read_i24s_be(raw).unwrap();
+/// assert_eq!(values[0].to_i32(), 1);
+/// assert_eq!(values[1].to_i32(), -1);
+/// ```
+///
+/// ## Usage Notes
+///
+/// - Use the `i24!` macro for compile-time checked construction
+/// - Use `.to_i32()` to convert to standard Rust types
+/// - Supports traits like `Add`, `Sub`, `Display`, `Hash`, `Ord`, and `FromStr`
+///
+/// ## Features
+///
+/// - **`serde`**: Enables `Serialize` and `Deserialize` support via JSON or other formats
+/// - **`pyo3`**: Exposes the `i24` type to Python via PyO3 bindings (as `I24`)
+/// - **`alloc`**: Enables `I24DiskMethods` for efficient bulk serialization/deserialization
 pub struct i24(I24Repr);
 
 // Safety: repr(transparent) and so if I24Repr is Zeroable so should i24 be
 unsafe impl Zeroable for i24 where I24Repr: Zeroable {}
 
 // Safety: repr(transparent) and so if I24Repr is NoUninit so should i24 be
-unsafe impl Pod for i24 where I24Repr: Pod {}
+// Must be NoUninit due to the padding byte.
+unsafe impl NoUninit for i24 where I24Repr: NoUninit {}
 
 #[doc(hidden)]
 pub mod __macros__ {
@@ -375,6 +457,113 @@ impl i24 {
             .and_then(Self::try_from_i32)
     }
 }
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
+
+/// Extension trait for performing efficient binary (de)serialization of [`i24`] values.
+///
+/// This trait provides methods to read and write slices of [`i24`] values to and from
+/// raw byte buffers using standard 3-byte representations in various byte orders.
+///
+/// These methods are especially useful when working with binary formats like audio files,
+/// network protocols, or memory-mapped files that use 24-bit integer encodings.
+///
+/// The methods support safe and zero-copy deserialization using [`bytemuck::cast_slice`],
+/// under the guarantee that the on-disk format is valid and byte-aligned.
+///
+/// ## Usage
+///
+/// This trait is not implemented on `[u8]` or `[i24]` directly.
+/// Instead, you must import the trait and call methods via the [`i24`] type:
+///
+/// ```rust
+/// use i24::I24DiskMethods; // Bring extension trait into scope
+/// use i24::i24 as I24; // Import the i24 type
+/// let raw_data: &[u8] = &[0x00, 0x01, 0x02, 0x00, 0x01, 0xFF]; // 2 values
+/// let values: Vec<I24> = I24::read_i24s_be(raw_data).expect("valid buffer");
+///
+/// let encoded: Vec<u8> = I24::write_i24s_be(&values);
+/// assert_eq!(encoded, raw_data);
+/// ```
+///
+/// ### Byte Order
+///
+/// Each method clearly indicates the expected byte order:
+///
+/// - `*_be`: Big-endian (most significant byte first)
+/// - `*_le`: Little-endian
+/// - `*_ne`: Native-endian (depends on target platform)
+///
+/// ## Safety
+///
+/// The `*_unchecked` variants skip input validation and assume:
+///
+/// - The input slice length is a multiple of 3
+/// - The slice is properly aligned and valid for casting to a [`crate::DiskI24`]
+///
+#[cfg(feature = "alloc")]
+pub trait I24DiskMethods {
+    fn read_i24s_be(bytes: &[u8]) -> Option<Vec<i24>> {
+        if bytes.len() % 3 != 0 {
+            return None;
+        }
+
+        let chunks: &[DiskI24] = cast_slice(bytes); // Safe: NoUninit, packed, 3-byte chunks
+        Some(chunks.iter().map(|b| i24::from_be_bytes(b.bytes)).collect())
+    }
+
+    unsafe fn read_i24s_be_unchecked(bytes: &[u8]) -> Vec<i24> {
+        let chunks: &[DiskI24] = cast_slice(bytes); // Safe: NoUninit, packed, 3-byte chunks
+        chunks.iter().map(|b| i24::from_be_bytes(b.bytes)).collect()
+    }
+
+    fn write_i24s_be(values: &[i24]) -> Vec<u8> {
+        values.iter().flat_map(|v| v.to_be_bytes()).collect()
+    }
+
+    fn read_i24s_le(bytes: &[u8]) -> Option<Vec<i24>> {
+        if bytes.len() % 3 != 0 {
+            return None;
+        }
+
+        let chunks: &[DiskI24] = cast_slice(bytes); // Safe: NoUninit, packed, 3-byte chunks
+        Some(chunks.iter().map(|b| i24::from_le_bytes(b.bytes)).collect())
+    }
+
+    unsafe fn read_i24s_le_unchecked(bytes: &[u8]) -> Vec<i24> {
+        let chunks: &[DiskI24] = cast_slice(bytes); // Safe: NoUninit, packed, 3-byte chunks
+        chunks.iter().map(|b| i24::from_le_bytes(b.bytes)).collect()
+    }
+
+    fn write_i24s_le(values: &[i24]) -> Vec<u8> {
+        values.iter().flat_map(|v| v.to_le_bytes()).collect()
+    }
+
+    fn read_i24s_ne(bytes: &[u8]) -> Option<Vec<i24>> {
+        if bytes.len() % 3 != 0 {
+            return None;
+        }
+
+        let chunks: &[DiskI24] = cast_slice(bytes); // Safe: NoUninit, packed, 3-byte chunks
+        Some(chunks.iter().map(|b| i24::from_ne_bytes(b.bytes)).collect())
+    }
+
+    unsafe fn read_i24s_ne_unchecked(bytes: &[u8]) -> Vec<i24> {
+        let chunks: &[DiskI24] = cast_slice(bytes); // Safe: NoUninit, packed, 3-byte chunks
+        chunks.iter().map(|b| i24::from_ne_bytes(b.bytes)).collect()
+    }
+
+    fn write_i24s_ne(values: &[i24]) -> Vec<u8> {
+        values.iter().flat_map(|v| v.to_ne_bytes()).collect()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl I24DiskMethods for i24 {}
 
 type TryFromIntError = <i8 as TryFrom<i64>>::Error;
 
