@@ -11,7 +11,7 @@ categories = ["data-structures", "mathematics", "encoding"]
 
 [dependencies]
 bytemuck = "1"
-num-traits = "0.2"
+num-traits = { version = "0.2", default-features = false }
 
 serde = { version = "1", default-features = false, optional = true }
 pyo3 = { version = "0.24.2", features = ["extension-module"], optional = true }
@@ -23,6 +23,7 @@ serde_json = { version = "1" }
 
 [features]
 alloc = []
-std = []
+libm = ["num-traits/libm"]
+std = ["num-traits/std"]
 pyo3 = ["std", "dep:pyo3", "dep:numpy"]
 serde = ["dep:serde"]
