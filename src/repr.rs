@@ -118,7 +118,7 @@ impl I24Repr {
         } else if value < Self::MIN {
             const { Self::wrapping_from_i32(Self::MIN) }
         } else {
-            unsafe { Self::from_bits(value as u32) }
+            Self::wrapping_from_i32(value)
         }
     }
 
