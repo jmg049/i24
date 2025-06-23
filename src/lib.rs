@@ -652,22 +652,18 @@ pub const fn from_str_error(bad_val: &str) -> ParseIntError {
     }
 }
 
-pub const fn positive_overflow() -> ParseIntError {
-    const { from_str_error("9999999999999999999999999999999999999999") }
-}
+const POSITIVE_OVERFLOW: ParseIntError =from_str_error("9999999999999999999999999999999999999999");
 
-pub const fn negative_overflow() -> ParseIntError {
-    const { from_str_error("-9999999999999999999999999999999999999999") }
-}
+const NEGATIVE_OVERFLOW: ParseIntError = from_str_error("-9999999999999999999999999999999999999999");
 
 macro_rules! from_str {
     ($meth: ident($($args: tt)*)) => {
         i32::$meth($($args)*)
             .and_then(|x| i24::try_from_i32(x).ok_or_else(|| {
                 if x < 0 {
-                    const { negative_overflow() }
+                    NEGATIVE_OVERFLOW
                 } else {
-                    const { positive_overflow() }
+                    POSITIVE_OVERFLOW
                 }
             }))
     };
