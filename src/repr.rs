@@ -1,4 +1,5 @@
 use bytemuck::{NoUninit, Zeroable};
+use num_traits::{FromPrimitive};
 use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
 
@@ -88,9 +89,32 @@ unsafe impl NoUninit for I24Repr {}
 ))]
 compile_error!("unknown endianness");
 
+impl FromPrimitive for I24Repr {
+    #[inline(always)]
+    fn from_i64(n: i64) -> Option<Self> {
+        I24Repr::try_from_i64(n)
+    }
+
+    #[inline(always)]
+    fn from_u64(n: u64) -> Option<Self> {
+        I24Repr::try_from_u64(n)
+    }
+
+    #[inline(always)]
+    fn from_i32(n: i32) -> Option<Self> {
+        I24Repr::try_from_i32(n)
+    }
+
+    #[inline(always)]
+    fn from_u32(n: u32) -> Option<Self> {
+        I24Repr::try_from_u32(n)
+    }
+}
+
 impl I24Repr {
     pub(super) const MAX: i32 = (1 << 23) - 1;
     pub(super) const MIN: i32 = -(1 << 23);
+    pub(super) const ZERO: i32 = 0;
     pub(super) const BITS_MASK: u32 = 0xFFFFFF;
 
     #[inline]

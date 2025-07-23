@@ -105,7 +105,7 @@ use core::{
     ops::{Neg, Not},
     str::FromStr,
 };
-use num_traits::{Num, One, ToBytes, Zero};
+use num_traits::{FromPrimitive, Num, One, ToBytes, ToPrimitive, Zero};
 
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
@@ -197,6 +197,18 @@ unsafe impl Zeroable for i24 where I24Repr: Zeroable {}
 // Must be NoUninit due to the padding byte.
 unsafe impl NoUninit for i24 where I24Repr: NoUninit {}
 
+impl FromPrimitive for i24 where I24Repr: FromPrimitive {
+    #[inline(always)]
+    fn from_i64(n: i64) -> Option<Self> {
+        I24Repr::from_i64(n).map(Self)
+    }
+
+    #[inline(always)]
+    fn from_u64(n: u64) -> Option<Self> {
+        I24Repr::from_u64(n).map(Self)
+    }
+}
+
 #[doc(hidden)]
 pub mod __macros__ {
     pub use bytemuck::Zeroable;
@@ -232,6 +244,9 @@ impl i24 {
 
     /// The largest value that can be represented by this integer type (2<sup>23</sup> − 1).
     pub const MAX: i24 = i24!(I24Repr::MAX);
+
+    /// Creates a new `i24` with all bits set to zero.
+    pub const ZERO: i24 = i24!(I24Repr::ZERO);
 
     #[inline(always)]
     const fn as_bits(&self) -> &u32 {
@@ -749,14 +764,14 @@ impl_bin_op! {
 
     impl Div = DivAssign div_assign {
         fn div(self, other) {
-            let result = self.to_i32().wrapping_div(other.to_i32());
+            let result = <i24>::to_i32(self).wrapping_div(<i24 as Clone>::clone(&other).to_i32());
             Self::wrapping_from_i32(result)
         }
     }
 
     impl Rem = RemAssign rem_assign {
         fn rem(self, other) {
-            let result = self.to_i32().wrapping_rem(other.to_i32());
+            let result = <i24>::to_i32(self).wrapping_rem(<i24 as Clone>::clone(&other).to_i32());
             Self::wrapping_from_i32(result)
         }
     }
@@ -861,7 +876,7 @@ macro_rules! impl_fmt {
         impl $name for i24 {
             #[inline]
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                <i32 as $name>::fmt(&self.to_i32(), f)
+                <i32 as $name>::fmt(&i24::to_i32(*self), f)
             }
         }
     )*};
@@ -983,6 +998,118 @@ impl ToBytes for i24 {
     }
 }
 
+impl ToPrimitive for i24 {
+    #[inline(always)]
+    fn to_i64(&self) -> Option<i64> {
+        Some(i24::to_i32(*self) as i64)
+    }
+
+    #[inline(always)]
+    fn to_u64(&self) -> Option<u64> {
+        let val = i24::to_i32(*self);
+        if val < 0 {
+            None
+        } else {
+            Some(val as u64)
+        }
+    }
+
+    #[inline(always)]
+    fn to_i32(&self) -> Option<i32> {
+        Some(i24::to_i32(*self))
+    }
+
+    #[inline(always)]
+    fn to_u32(&self) -> Option<u32> {
+        let val = i24::to_i32(*self);
+        if val < 0 {
+            None
+        } else {
+            Some(val as u32)
+        }
+    }
+
+    #[inline(always)]
+    fn to_i16(&self) -> Option<i16> {
+        let val = i24::to_i32(*self);
+        if val < i16::MIN as i32 || val > i16::MAX as i32 {
+            None
+        } else {
+            Some(val as i16)
+        }
+    }
+
+    #[inline(always)]
+    fn to_u16(&self) -> Option<u16> {
+        let val = i24::to_i32(*self);
+        if val < 0 || val > u16::MAX as i32 {
+            None
+        } else {
+            Some(val as u16)
+        }
+    }
+
+    #[inline(always)]
+    fn to_i8(&self) -> Option<i8> {
+        let val = i24::to_i32(*self);
+        if val < i8::MIN as i32 || val > i8::MAX as i32 {
+            None
+        } else {
+            Some(val as i8)
+        }
+    }
+
+    #[inline(always)]
+    fn to_u8(&self) -> Option<u8> {
+        let val = i24::to_i32(*self);
+        if val < 0 || val > u8::MAX as i32 {
+            None
+        } else {
+            Some(val as u8)
+        }
+    }
+
+    #[inline(always)]
+    fn to_isize(&self) -> Option<isize> {
+        Some(i24::to_i32(*self) as isize)
+    }
+
+    #[inline(always)]
+    fn to_usize(&self) -> Option<usize> {
+        let val = i24::to_i32(*self);
+        if val < 0 {
+            None
+        } else {
+            Some(val as usize)
+        }
+    }
+
+    #[inline(always)]
+    fn to_f32(&self) -> Option<f32> {
+        Some(i24::to_i32(*self) as f32)
+    }
+
+    #[inline(always)]
+    fn to_f64(&self) -> Option<f64> {
+        Some(i24::to_i32(*self) as f64)
+    }
+
+    #[inline(always)]
+    fn to_i128(&self) -> Option<i128> {
+        Some(i24::to_i32(*self) as i128)
+    }
+
+    #[inline(always)]
+    fn to_u128(&self) -> Option<u128> {
+        let val = i24::to_i32(*self);
+        if val < 0 {
+            None
+        } else {
+            Some(val as u128)
+        }
+    }
+}
+
 #[cfg(feature = "pyo3")]
 #[pyclass(name = "I24")]
 pub struct PyI24 {
@@ -1000,9 +1127,9 @@ fn pyi24(m: &Bound<'_, PyModule>) -> PyResult<()> {
 unsafe impl numpy::Element for i24 {
     const IS_COPY: bool = true;
 
-    fn get_dtype_bound(py: Python<'_>) -> Bound<'_, numpy::PyArrayDescr> {
-        numpy::dtype::<i24>(py)
-    }
+    // fn get_dtype_bound(py: Python<'_>) -> Bound<'_, numpy::PyArrayDescr> {
+    //     numpy::dtype::<i24>(py)
+    // }
 
     fn clone_ref(&self, _py: Python<'_>) -> Self {
         self.clone()
@@ -1285,5 +1412,135 @@ mod i24_tests {
         };
         let test = serde_json::to_string(&test_struct).expect("Failed to serialize!");
         assert_eq!(test, "{\"value\":11}");
+    }
+
+    #[test]
+    fn test_to_primitive_signed() {
+        use num_traits::ToPrimitive;
+        
+        // Test positive values
+        let val = i24!(100);
+        assert_eq!(val.to_i8(), Some(100i8));
+        assert_eq!(val.to_i16(), Some(100i16));
+        assert_eq!(ToPrimitive::to_i32(&val), Some(100i32));
+        assert_eq!(val.to_i64(), Some(100i64));
+        assert_eq!(val.to_i128(), Some(100i128));
+        assert_eq!(val.to_isize(), Some(100isize));
+        
+        // Test negative values
+        let val = i24!(-100);
+        assert_eq!(val.to_i8(), Some(-100i8));
+        assert_eq!(val.to_i16(), Some(-100i16));
+        assert_eq!(ToPrimitive::to_i32(&val), Some(-100i32));
+        assert_eq!(val.to_i64(), Some(-100i64));
+        assert_eq!(val.to_i128(), Some(-100i128));
+        assert_eq!(val.to_isize(), Some(-100isize));
+        
+        // Test overflow cases for smaller types
+        let val = i24::MAX;
+        assert_eq!(val.to_i8(), None); // i24::MAX > i8::MAX
+        assert_eq!(val.to_i16(), None); // i24::MAX > i16::MAX
+        assert_eq!(ToPrimitive::to_i32(&val), Some(i24::MAX.to_i32()));
+        
+        let val = i24::MIN;
+        assert_eq!(val.to_i8(), None); // i24::MIN < i8::MIN
+        assert_eq!(val.to_i16(), None); // i24::MIN < i16::MIN
+        assert_eq!(ToPrimitive::to_i32(&val), Some(i24::MIN.to_i32()));
+    }
+    
+    #[test]
+    fn test_to_primitive_unsigned() {
+        use num_traits::ToPrimitive;
+        
+        // Test positive values
+        let val = i24!(100);
+        assert_eq!(val.to_u8(), Some(100u8));
+        assert_eq!(val.to_u16(), Some(100u16));
+        assert_eq!(val.to_u32(), Some(100u32));
+        assert_eq!(val.to_u64(), Some(100u64));
+        assert_eq!(val.to_u128(), Some(100u128));
+        assert_eq!(val.to_usize(), Some(100usize));
+        
+        // Test negative values should return None for unsigned types
+        let val = i24!(-100);
+        assert_eq!(val.to_u8(), None);
+        assert_eq!(val.to_u16(), None);
+        assert_eq!(val.to_u32(), None);
+        assert_eq!(val.to_u64(), None);
+        assert_eq!(val.to_u128(), None);
+        assert_eq!(val.to_usize(), None);
+        
+        // Test overflow cases for smaller unsigned types
+        let val = i24::MAX;
+        assert_eq!(val.to_u8(), None); // i24::MAX > u8::MAX
+        assert_eq!(val.to_u16(), None); // i24::MAX > u16::MAX
+        assert_eq!(val.to_u32(), Some(i24::MAX.to_i32() as u32));
+        
+        // Test zero
+        let val = i24!(0);
+        assert_eq!(val.to_u8(), Some(0u8));
+        assert_eq!(val.to_u16(), Some(0u16));
+        assert_eq!(val.to_u32(), Some(0u32));
+        assert_eq!(val.to_u64(), Some(0u64));
+        assert_eq!(val.to_u128(), Some(0u128));
+        assert_eq!(val.to_usize(), Some(0usize));
+    }
+    
+    #[test]
+    fn test_to_primitive_floats() {
+        use num_traits::ToPrimitive;
+        
+        // Test positive values
+        let val = i24!(100);
+        assert_eq!(val.to_f32(), Some(100.0f32));
+        assert_eq!(val.to_f64(), Some(100.0f64));
+        
+        // Test negative values
+        let val = i24!(-100);
+        assert_eq!(val.to_f32(), Some(-100.0f32));
+        assert_eq!(val.to_f64(), Some(-100.0f64));
+        
+        // Test extreme values
+        let val = i24::MAX;
+        assert_eq!(val.to_f32(), Some(i24::MAX.to_i32() as f32));
+        assert_eq!(val.to_f64(), Some(i24::MAX.to_i32() as f64));
+        
+        let val = i24::MIN;
+        assert_eq!(val.to_f32(), Some(i24::MIN.to_i32() as f32));
+        assert_eq!(val.to_f64(), Some(i24::MIN.to_i32() as f64));
+    }
+    
+    #[test]
+    fn test_to_primitive_boundary_values() {
+        use num_traits::ToPrimitive;
+        
+        // Test values at the boundaries of smaller types
+        let val = i24!(127); // i8::MAX
+        assert_eq!(val.to_i8(), Some(127i8));
+        assert_eq!(val.to_u8(), Some(127u8));
+        
+        let val = i24!(128); // i8::MAX + 1
+        assert_eq!(val.to_i8(), None);
+        assert_eq!(val.to_u8(), Some(128u8));
+        
+        let val = i24!(255); // u8::MAX
+        assert_eq!(val.to_u8(), Some(255u8));
+        
+        let val = i24!(256); // u8::MAX + 1
+        assert_eq!(val.to_u8(), None);
+        
+        let val = i24!(32767); // i16::MAX
+        assert_eq!(val.to_i16(), Some(32767i16));
+        assert_eq!(val.to_u16(), Some(32767u16));
+        
+        let val = i24!(32768); // i16::MAX + 1
+        assert_eq!(val.to_i16(), None);
+        assert_eq!(val.to_u16(), Some(32768u16));
+        
+        let val = i24!(65535); // u16::MAX
+        assert_eq!(val.to_u16(), Some(65535u16));
+        
+        let val = i24!(65536); // u16::MAX + 1
+        assert_eq!(val.to_u16(), None);
     }
 }
