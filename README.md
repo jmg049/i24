@@ -1,27 +1,33 @@
 <div align="center">
 
-# i24: A 24-bit Signed Integer Type for Rust
+# i24: Integer Types for Rust (i24, u24)
 
 <img src="logo.png" alt="i24 Logo" width="200"/>
 
 [![Crates.io](https://img.shields.io/crates/v/i24.svg)](https://crates.io/crates/i24)[![Docs.rs](https://docs.rs/i24/badge.svg)](https://docs.rs/i24)![MSRV: 1.70+](https://img.shields.io/badge/MSRV-1.70+-blue)
 </div>
 
-The ``i24`` crate provides a 24-bit signed integer type for Rust, filling the gap between
-``i16`` and ``i32``. This type is particularly useful in audio processing, certain embedded
- systems, and other scenarios where 24-bit precision is required but 32 bits would be excessive.
+The ``i24`` crate provides specialized integer types for Rust: **i24** (24-bit signed) and **u24** (24-bit unsigned). These types fill precision gaps in Rust's integer types and are particularly useful in audio processing, embedded systems, network protocols, and other scenarios where specific bit-width precision is required.
 
 ## Features
 
-- Efficient 24-bit signed integer representation
-- Seamless conversion to and from ``i32``
-- Support for basic arithmetic operations with overflow checking
+### Integer Types
+
+- **i24**: 24-bit signed integer (range: -8,388,608 to 8,388,607)
+- **u24**: 24-bit unsigned integer (range: 0 to 16,777,215)
+
+### Core Functionality
+
+- Seamless conversion to/from standard Rust integer types
+- Complete arithmetic operations with overflow checking
 - Bitwise operations
 - Conversions from various byte representations (little-endian, big-endian, native)
-- Implements common traits like``Debug``,``Display``,``PartialEq``,``Eq``,``PartialOrd``,``Ord``, and``Hash``
+- Wire/packed format support for binary protocols
+- Compile-time macros: ``i24!()`` and ``u24!()`` for checked construction
+- Implements standard traits: ``Debug``, ``Display``, ``PartialEq``, ``Eq``, ``PartialOrd``, ``Ord``, ``Hash``
 
- This crate came about as a part of the [Wavers](https://crates.io/crates/wavers) project, which is a Wav file reader and writer for Rust.
- The ``i24`` struct also has pyo3 bindings for use in Python. Enable the``pyo3`` feature to use the pyo3 bindings.
+This crate came about as a part of the [Wavers](https://crates.io/crates/wavers) project, which is a Wav file reader and writer for Rust.
+All integer types have Python bindings available via the ``pyo3`` feature.
 
 ## Usage
 
@@ -29,56 +35,101 @@ The ``i24`` crate provides a 24-bit signed integer type for Rust, filling the ga
 
 ````toml
  [dependencies]
- i24 = "2.1.0"
+ i24 = "2.2.0"
 ````
 
- Then, in your Rust code:
+### Basic Usage
 
 ````rust
+use i24::{i24, u24};
 
-# #[macro_use] extern crate i24
+// Using macros for compile-time checked construction
+let signed_24 = i24!(1000);
+let unsigned_24 = u24!(2000);
 
- let a = i24!(1000);
- let b = i24!(2000);
- let c = a + b;
- assert_eq!(c.to_i32(), 3000);
- assert_eq!(c, i24!(3000));
+// Arithmetic operations
+let sum_24 = signed_24 + i24!(500);
+assert_eq!(sum_24.to_i32(), 1500);
+
+// Conversions
+let as_i32: i32 = signed_24.into();
+let as_u32: u32 = unsigned_24.into();
 ````
 
- The``i24!`` macro allows you to create``i24`` values at compile time, ensuring that the value is within the valid range.
+The ``i24!()`` and ``u24!()`` macros allow you to create values at compile time, ensuring they're within the valid range.
 
- Then if working with 3-byte representations from disk or the network, you can use the``I24DiskMethods`` trait to read and write ``i24`` slices of ``i24`.
+### Binary Data and Wire Formats
 
- ````ignore
- use i24::I24DiskMethods; // Bring extension trait into scope
- use i24::i24 as I24; // Import the i24 type
- let raw_data: &[u8] = &[0x00, 0x01, 0x02, 0x00, 0x01, 0xFF]; // 2 values
- let values: Vec<I24> = I24::read_i24s_be(raw_data).expect("valid buffer");
+For working with binary data, all types support reading/writing from byte arrays:
 
- let encoded: Vec<u8> = I24::write_i24s_be(&values);
- assert_eq!(encoded, raw_data);
+````rust
+use i24::{i24, u24};
+
+// Reading from bytes (little-endian, big-endian, native)
+let bytes_le = [0x00, 0x01, 0x02]; // 3-byte representation
+let value = i24::from_le_bytes(bytes_le);
+
+// Writing to bytes
+let bytes: [u8; 3] = value.to_be_bytes();
+
+// Bulk operations for slices
+let raw_data: &[u8] = &[0x00, 0x01, 0x02, 0x00, 0x01, 0xFF];
+let values: Vec<i24> = i24::read_i24s_be(raw_data).expect("valid buffer");
+let encoded: Vec<u8> = i24::write_i24s_be(&values);
+````
+
+### Packed Structs
+
+For binary protocols and serialization, use the ``PackedStruct`` trait:
+
+````rust
+use i24::{i24, packed::PackedStruct};
+
+#[derive(Debug, Clone, PartialEq)]
+struct WireFormat {
+    header: u32,
+    samples: [i24; 5],
+}
+
+impl PackedStruct for WireFormat {
+    const PACKED_SIZE: usize = 4 + 5 * 3; // u32 + 5 * i24 = 19 bytes
+    
+    fn from_packed_bytes(bytes: &[u8]) -> Option<Self> {
+        // Implementation for deserializing from bytes
+        // ...
+    }
+    
+    fn to_packed_bytes(&self) -> Vec<u8> {
+        // Implementation for serializing to bytes
+        // ...
+    }
+}
 ````
 
 ## Safety and Limitations
 
- While``i24`` strives to behave similarly to Rust's built-in integer types, there are some
- important considerations:
+All integer types strive to behave similarly to Rust's built-in integer types, with some important considerations:
 
-- The valid range for ``i24`` is [-8,388,608, 8,388,607].
-- Overflow behavior in arithmetic operations matches that of ``i32`.
-- Bitwise operations are performed on the 24-bit representation.
+### Value Ranges
 
-Always use checked arithmetic operations when dealing with untrusted input or when
-overflow/underflow is a concern.
+- **i24**: [-8,388,608, 8,388,607]
+- **u24**: [0, 16,777,215]
 
-``i24`` aligns with the safety requirements of bytemuck (``NoUninit``, ``Zeroable`` and ``AnyBitPattern``), ensuring that it is safe to use for converting between valid bytes and a ``i24`` value.
-Then when using the ``I24DiskMethods`` trait, it is safe to use (internally) the ``bytemuck::cast_slice`` function to convert between a slice of bytes and a slice of ``i24`` values.
+### Overflow Behavior
+
+- Arithmetic operations match the behavior of their closest standard Rust integer type
+- Bitwise operations are performed on the actual bit-width representation
+- Always use checked arithmetic operations when dealing with untrusted input
+
+### Memory Safety
+
+All types align with ``bytemuck`` safety requirements (``NoUninit``, ``Zeroable``, ``AnyBitPattern``), ensuring safe byte-to-value conversions. The bulk I/O operations use ``bytemuck::cast_slice`` internally for efficient, safe conversions.
 
 ## Feature Flags
 
-- **pyo3**: Enables the pyo3 bindings for the ``i24`` type.
-- **serde**: Enables the ``Serialize`` and ``Deserialize`` traits for the ``i24`` type.
-- **alloc**: Enables the ``I24DiskMethods`` trait for the ``i24`` type.
+- **pyo3**: Enables Python bindings for all integer types (i24, u24)
+- **serde**: Enables ``Serialize`` and ``Deserialize`` traits for all integer types
+- **alloc**: Enables bulk I/O operations and ``PackedStruct`` functionality
 
 ## Contributing
 
@@ -90,11 +141,4 @@ Then when using the ``I24DiskMethods`` trait, it is safe to use (internally) the
 
 ## Benchmarks
 
-The crate was tested using the code found in the [i24_benches](./i24_benches) directory of the repo. The full benchmark data can be found in the [benchmark report](./i24_benches/benchmark_analysis/benchmark_report.md).
-Below is a figure which summarises the performance with repsect to the ``i32`` type. From the figure it is clear that the ``i24`` type mostly matches the performance of an ``i32`` with some slight variations.
-
-![Durations overview per operation](i24_benches/benchmark_analysis/operation_durations.png)
-
-## Related Projects
-
-This crate was developed as part of the [Wavers](https://crates.io/crates/wavers) project, a Wav file reader and writer for Rust.
+The crate was tested using the code found in the [i24_benches](./i24_benches) directory of the repo. Unsurprisingly, the performance of both types matches the performance of the underlying 32-bit type.
