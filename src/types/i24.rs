@@ -1,3 +1,8 @@
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 use bytemuck::{NoUninit, Pod, Zeroable};
 use core::fmt;
 use core::fmt::{Debug, Display, LowerHex, Octal, UpperHex};
