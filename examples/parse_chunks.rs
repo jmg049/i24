@@ -27,7 +27,7 @@ pub fn parse_records_le(bytes: &[u8]) -> Option<impl Iterator<Item = DataStruct>
     const RECORD_SIZE: usize = 4 + 5 * 3; // 19 bytes per record
 
     // Ensure the input is evenly divisible into records
-    if bytes.len() % RECORD_SIZE != 0 {
+    if !bytes.len().is_multiple_of(RECORD_SIZE) {
         return None;
     }
 

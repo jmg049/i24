@@ -225,7 +225,7 @@ pub trait PackedStruct: Sized {
     /// # Arguments
     ///
     /// * `bytes` - A byte slice containing the packed representation.
-    ///           Must be at least `PACKED_SIZE` bytes long.
+    ///   Must be at least `PACKED_SIZE` bytes long.
     ///
     /// # Returns
     ///
@@ -245,7 +245,7 @@ pub trait PackedStruct: Sized {
     /// # Arguments
     ///
     /// * `bytes` - A byte slice containing multiple packed structures.
-    ///           Length must be a multiple of `PACKED_SIZE`.
+    ///   Length must be a multiple of `PACKED_SIZE`.
     ///
     /// # Returns
     ///
@@ -253,7 +253,7 @@ pub trait PackedStruct: Sized {
     /// is not a multiple of `PACKED_SIZE`.
     #[cfg(feature = "alloc")]
     fn from_packed_slice(bytes: &[u8]) -> Option<Vec<Self>> {
-        if bytes.len() % Self::PACKED_SIZE != 0 {
+        if !bytes.len().is_multiple_of(Self::PACKED_SIZE) {
             return None;
         }
 

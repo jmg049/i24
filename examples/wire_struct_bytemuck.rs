@@ -69,7 +69,7 @@ impl DataStructWire {
 /// including any padding that Rust adds for alignment.
 pub fn parse_records_bytemuck(bytes: &[u8]) -> Option<Vec<DataStruct>> {
     // Check if the length is compatible with our wire struct size
-    if bytes.len() % std::mem::size_of::<DataStructWire>() != 0 {
+    if !bytes.len().is_multiple_of(std::mem::size_of::<DataStructWire>()) {
         return None;
     }
 

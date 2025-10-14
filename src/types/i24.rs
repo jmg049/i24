@@ -72,11 +72,13 @@ use crate::{TryFromIntError, i24, out_of_range};
 ///  Note: Requires the ``alloc`` feature to be enabled.
 ///
 /// ```
+/// # #[cfg(feature = "alloc")] {
 /// use i24::I24;
 /// let raw: &[u8] = &[0x00, 0x00, 0x01, 0xFF, 0xFF, 0xFF];
-/// let values = I24::read_i24s_be(raw).unwrap();
+/// let values = I24::read_i24s_be(raw).expect("Test value should convert successfully");
 /// assert_eq!(values[0].to_i32(), 1);
 /// assert_eq!(values[1].to_i32(), -1);
+/// # }
 /// ```
 ///
 /// ## Usage Notes
@@ -369,8 +371,8 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(10).unwrap().abs(), I24::try_from_i32(10).unwrap());
-    /// assert_eq!(I24::try_from_i32(-10).unwrap().abs(), I24::try_from_i32(10).unwrap());
+    /// assert_eq!(I24::try_from_i32(10).expect("Test value should convert successfully").abs(), I24::try_from_i32(10).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(-10).expect("Test value should convert successfully").abs(), I24::try_from_i32(10).expect("Test value should convert successfully"));
     /// ```
     #[inline]
     pub fn abs(self) -> Self {
@@ -387,8 +389,8 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(10).unwrap().wrapping_abs(), I24::try_from_i32(10).unwrap());
-    /// assert_eq!(I24::try_from_i32(-10).unwrap().wrapping_abs(), I24::try_from_i32(10).unwrap());
+    /// assert_eq!(I24::try_from_i32(10).expect("Test value should convert successfully").wrapping_abs(), I24::try_from_i32(10).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(-10).expect("Test value should convert successfully").wrapping_abs(), I24::try_from_i32(10).expect("Test value should convert successfully"));
     /// assert_eq!(I24::MIN.wrapping_abs(), I24::MIN); // Wraps around
     /// ```
     #[inline]
@@ -406,8 +408,8 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(10).unwrap().saturating_abs(), I24::try_from_i32(10).unwrap());
-    /// assert_eq!(I24::try_from_i32(-10).unwrap().saturating_abs(), I24::try_from_i32(10).unwrap());
+    /// assert_eq!(I24::try_from_i32(10).expect("Test value should convert successfully").saturating_abs(), I24::try_from_i32(10).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(-10).expect("Test value should convert successfully").saturating_abs(), I24::try_from_i32(10).expect("Test value should convert successfully"));
     /// assert_eq!(I24::MIN.saturating_abs(), I24::MAX); // Saturates to MAX
     /// ```
     #[inline]
@@ -433,9 +435,9 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(10).unwrap().signum(), I24::try_from_i32(1).unwrap());
-    /// assert_eq!(I24::try_from_i32(0).unwrap().signum(), I24::try_from_i32(0).unwrap());
-    /// assert_eq!(I24::try_from_i32(-10).unwrap().signum(), I24::try_from_i32(-1).unwrap());
+    /// assert_eq!(I24::try_from_i32(10).expect("Test value should convert successfully").signum(), I24::try_from_i32(1).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(0).expect("Test value should convert successfully").signum(), I24::try_from_i32(0).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(-10).expect("Test value should convert successfully").signum(), I24::try_from_i32(-1).expect("Test value should convert successfully"));
     /// ```
     #[inline]
     pub fn signum(self) -> Self {
@@ -453,9 +455,9 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert!(!I24::try_from_i32(10).unwrap().is_negative());
-    /// assert!(!I24::try_from_i32(0).unwrap().is_negative());
-    /// assert!(I24::try_from_i32(-10).unwrap().is_negative());
+    /// assert!(!I24::try_from_i32(10).expect("Test value should convert successfully").is_negative());
+    /// assert!(!I24::try_from_i32(0).expect("Test value should convert successfully").is_negative());
+    /// assert!(I24::try_from_i32(-10).expect("Test value should convert successfully").is_negative());
     /// ```
     #[inline]
     pub const fn is_negative(self) -> bool {
@@ -468,9 +470,9 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert!(I24::try_from_i32(10).unwrap().is_positive());
-    /// assert!(!I24::try_from_i32(0).unwrap().is_positive());
-    /// assert!(!I24::try_from_i32(-10).unwrap().is_positive());
+    /// assert!(I24::try_from_i32(10).expect("Test value should convert successfully").is_positive());
+    /// assert!(!I24::try_from_i32(0).expect("Test value should convert successfully").is_positive());
+    /// assert!(!I24::try_from_i32(-10).expect("Test value should convert successfully").is_positive());
     /// ```
     #[inline]
     pub const fn is_positive(self) -> bool {
@@ -490,9 +492,9 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(-3).unwrap().clamp(I24::try_from_i32(-2).unwrap(), I24::try_from_i32(1).unwrap()), I24::try_from_i32(-2).unwrap());
-    /// assert_eq!(I24::try_from_i32(0).unwrap().clamp(I24::try_from_i32(-2).unwrap(), I24::try_from_i32(1).unwrap()), I24::try_from_i32(0).unwrap());
-    /// assert_eq!(I24::try_from_i32(2).unwrap().clamp(I24::try_from_i32(-2).unwrap(), I24::try_from_i32(1).unwrap()), I24::try_from_i32(1).unwrap());
+    /// assert_eq!(I24::try_from_i32(-3).expect("Test value should convert successfully").clamp(I24::try_from_i32(-2).expect("Test value should convert successfully"), I24::try_from_i32(1).expect("Test value should convert successfully")), I24::try_from_i32(-2).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(0).expect("Test value should convert successfully").clamp(I24::try_from_i32(-2).expect("Test value should convert successfully"), I24::try_from_i32(1).expect("Test value should convert successfully")), I24::try_from_i32(0).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(2).expect("Test value should convert successfully").clamp(I24::try_from_i32(-2).expect("Test value should convert successfully"), I24::try_from_i32(1).expect("Test value should convert successfully")), I24::try_from_i32(1).expect("Test value should convert successfully"));
     /// ```
     #[inline]
     pub fn clamp(self, min: Self, max: Self) -> Self {
@@ -512,8 +514,8 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(1).unwrap().min(I24::try_from_i32(2).unwrap()), I24::try_from_i32(1).unwrap());
-    /// assert_eq!(I24::try_from_i32(2).unwrap().min(I24::try_from_i32(1).unwrap()), I24::try_from_i32(1).unwrap());
+    /// assert_eq!(I24::try_from_i32(1).expect("Test value should convert successfully").min(I24::try_from_i32(2).expect("Test value should convert successfully")), I24::try_from_i32(1).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(2).expect("Test value should convert successfully").min(I24::try_from_i32(1).expect("Test value should convert successfully")), I24::try_from_i32(1).expect("Test value should convert successfully"));
     /// ```
     #[inline]
     pub fn min(self, other: Self) -> Self {
@@ -526,8 +528,8 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(1).unwrap().max(I24::try_from_i32(2).unwrap()), I24::try_from_i32(2).unwrap());
-    /// assert_eq!(I24::try_from_i32(2).unwrap().max(I24::try_from_i32(1).unwrap()), I24::try_from_i32(2).unwrap());
+    /// assert_eq!(I24::try_from_i32(1).expect("Test value should convert successfully").max(I24::try_from_i32(2).expect("Test value should convert successfully")), I24::try_from_i32(2).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(2).expect("Test value should convert successfully").max(I24::try_from_i32(1).expect("Test value should convert successfully")), I24::try_from_i32(2).expect("Test value should convert successfully"));
     /// ```
     #[inline]
     pub fn max(self, other: Self) -> Self {
@@ -540,8 +542,8 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(100).unwrap().wrapping_add(I24::try_from_i32(27).unwrap()), I24::try_from_i32(127).unwrap());
-    /// assert_eq!(I24::MAX.wrapping_add(I24::try_from_i32(2).unwrap()), I24::MIN + I24::try_from_i32(1).unwrap());
+    /// assert_eq!(I24::try_from_i32(100).expect("Test value should convert successfully").wrapping_add(I24::try_from_i32(27).expect("Test value should convert successfully")), I24::try_from_i32(127).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::MAX.wrapping_add(I24::try_from_i32(2).expect("Test value should convert successfully")), I24::MIN + I24::try_from_i32(1).expect("Test value should convert successfully"));
     /// ```
     #[inline]
     pub fn wrapping_add(self, rhs: Self) -> Self {
@@ -554,8 +556,8 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(100).unwrap().wrapping_sub(I24::try_from_i32(100).unwrap()), I24::try_from_i32(0).unwrap());
-    /// assert_eq!(I24::MIN.wrapping_sub(I24::try_from_i32(1).unwrap()), I24::MAX);
+    /// assert_eq!(I24::try_from_i32(100).expect("Test value should convert successfully").wrapping_sub(I24::try_from_i32(100).expect("Test value should convert successfully")), I24::try_from_i32(0).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::MIN.wrapping_sub(I24::try_from_i32(1).expect("Test value should convert successfully")), I24::MAX);
     /// ```
     #[inline]
     pub fn wrapping_sub(self, rhs: Self) -> Self {
@@ -568,8 +570,8 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(10).unwrap().wrapping_mul(I24::try_from_i32(12).unwrap()), I24::try_from_i32(120).unwrap());
-    /// assert_eq!(I24::try_from_i32(25).unwrap().wrapping_mul(I24::try_from_i32(4).unwrap()), I24::try_from_i32(100).unwrap());
+    /// assert_eq!(I24::try_from_i32(10).expect("Test value should convert successfully").wrapping_mul(I24::try_from_i32(12).expect("Test value should convert successfully")), I24::try_from_i32(120).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(25).expect("Test value should convert successfully").wrapping_mul(I24::try_from_i32(4).expect("Test value should convert successfully")), I24::try_from_i32(100).expect("Test value should convert successfully"));
     /// ```
     #[inline]
     pub fn wrapping_mul(self, rhs: Self) -> Self {
@@ -589,8 +591,8 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(100).unwrap().wrapping_div(I24::try_from_i32(10).unwrap()), I24::try_from_i32(10).unwrap());
-    /// assert_eq!(I24::MIN.wrapping_div(I24::try_from_i32(-1).unwrap()), I24::MIN); // Wraps around
+    /// assert_eq!(I24::try_from_i32(100).expect("Test value should convert successfully").wrapping_div(I24::try_from_i32(10).expect("Test value should convert successfully")), I24::try_from_i32(10).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::MIN.wrapping_div(I24::try_from_i32(-1).expect("Test value should convert successfully")), I24::MIN); // Wraps around
     /// ```
     #[inline]
     pub fn wrapping_div(self, rhs: Self) -> Self {
@@ -610,8 +612,8 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(100).unwrap().wrapping_rem(I24::try_from_i32(10).unwrap()), I24::try_from_i32(0).unwrap());
-    /// assert_eq!(I24::MIN.wrapping_rem(I24::try_from_i32(-1).unwrap()), I24::try_from_i32(0).unwrap()); // Wraps around
+    /// assert_eq!(I24::try_from_i32(100).expect("Test value should convert successfully").wrapping_rem(I24::try_from_i32(10).expect("Test value should convert successfully")), I24::try_from_i32(0).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::MIN.wrapping_rem(I24::try_from_i32(-1).expect("Test value should convert successfully")), I24::try_from_i32(0).expect("Test value should convert successfully")); // Wraps around
     /// ```
     #[inline]
     pub fn wrapping_rem(self, rhs: Self) -> Self {
@@ -624,7 +626,7 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(100).unwrap().wrapping_neg(), I24::try_from_i32(-100).unwrap());
+    /// assert_eq!(I24::try_from_i32(100).expect("Test value should convert successfully").wrapping_neg(), I24::try_from_i32(-100).expect("Test value should convert successfully"));
     /// assert_eq!(I24::MIN.wrapping_neg(), I24::MIN); // Wraps around
     /// ```
     #[inline]
@@ -638,9 +640,9 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(100).unwrap().saturating_add(I24::try_from_i32(1).unwrap()), I24::try_from_i32(101).unwrap());
-    /// assert_eq!(I24::MAX.saturating_add(I24::try_from_i32(1).unwrap()), I24::MAX);
-    /// assert_eq!(I24::MIN.saturating_add(I24::try_from_i32(-1).unwrap()), I24::MIN);
+    /// assert_eq!(I24::try_from_i32(100).expect("Test value should convert successfully").saturating_add(I24::try_from_i32(1).expect("Test value should convert successfully")), I24::try_from_i32(101).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::MAX.saturating_add(I24::try_from_i32(1).expect("Test value should convert successfully")), I24::MAX);
+    /// assert_eq!(I24::MIN.saturating_add(I24::try_from_i32(-1).expect("Test value should convert successfully")), I24::MIN);
     /// ```
     #[inline]
     pub fn saturating_add(self, rhs: Self) -> Self {
@@ -662,9 +664,9 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(100).unwrap().saturating_sub(I24::try_from_i32(127).unwrap()), I24::try_from_i32(-27).unwrap());
-    /// assert_eq!(I24::MIN.saturating_sub(I24::try_from_i32(1).unwrap()), I24::MIN);
-    /// assert_eq!(I24::MAX.saturating_sub(I24::try_from_i32(-1).unwrap()), I24::MAX);
+    /// assert_eq!(I24::try_from_i32(100).expect("Test value should convert successfully").saturating_sub(I24::try_from_i32(127).expect("Test value should convert successfully")), I24::try_from_i32(-27).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::MIN.saturating_sub(I24::try_from_i32(1).expect("Test value should convert successfully")), I24::MIN);
+    /// assert_eq!(I24::MAX.saturating_sub(I24::try_from_i32(-1).expect("Test value should convert successfully")), I24::MAX);
     /// ```
     #[inline]
     pub fn saturating_sub(self, rhs: Self) -> Self {
@@ -686,9 +688,9 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(10).unwrap().saturating_mul(I24::try_from_i32(12).unwrap()), I24::try_from_i32(120).unwrap());
-    /// assert_eq!(I24::try_from_i32(1000000).unwrap().saturating_mul(I24::try_from_i32(10).unwrap()), I24::MAX);
-    /// assert_eq!(I24::try_from_i32(-1000000).unwrap().saturating_mul(I24::try_from_i32(10).unwrap()), I24::MIN);
+    /// assert_eq!(I24::try_from_i32(10).expect("Test value should convert successfully").saturating_mul(I24::try_from_i32(12).expect("Test value should convert successfully")), I24::try_from_i32(120).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(1000000).expect("Test value should convert successfully").saturating_mul(I24::try_from_i32(10).expect("Test value should convert successfully")), I24::MAX);
+    /// assert_eq!(I24::try_from_i32(-1000000).expect("Test value should convert successfully").saturating_mul(I24::try_from_i32(10).expect("Test value should convert successfully")), I24::MIN);
     /// ```
     #[inline]
     pub const fn saturating_mul(self, rhs: Self) -> Self {
@@ -709,8 +711,8 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;;
-    /// assert_eq!(I24::try_from_i32(100).unwrap().saturating_div(I24::try_from_i32(10).unwrap()), I24::try_from_i32(10).unwrap());
-    /// assert_eq!(I24::MIN.saturating_div(I24::try_from_i32(-1).unwrap()), I24::MAX); // Saturates
+    /// assert_eq!(I24::try_from_i32(100).expect("Test value should convert successfully").saturating_div(I24::try_from_i32(10).expect("Test value should convert successfully")), I24::try_from_i32(10).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::MIN.saturating_div(I24::try_from_i32(-1).expect("Test value should convert successfully")), I24::MAX); // Saturates
     /// ```
     #[inline]
     pub fn saturating_div(self, rhs: Self) -> Self {
@@ -727,7 +729,7 @@ impl I24 {
     ///
     /// ```
     /// use i24::I24;
-    /// assert_eq!(I24::try_from_i32(100).unwrap().saturating_neg(), I24::try_from_i32(-100).unwrap());
+    /// assert_eq!(I24::try_from_i32(100).expect("Test value should convert successfully").saturating_neg(), I24::try_from_i32(-100).expect("Test value should convert successfully"));
     /// assert_eq!(I24::MIN.saturating_neg(), I24::MAX); // Saturates
     /// ```
     #[inline]
@@ -744,7 +746,7 @@ impl I24 {
     /// # Arguments
     ///
     /// * `bytes` - A byte slice containing 24-bit unsigned integers in little-endian format.
-    ///             The length must be a multiple of 3.
+    ///   The length must be a multiple of 3.
     ///
     /// # Returns
     ///
@@ -752,7 +754,7 @@ impl I24 {
     /// length is not a multiple of 3.
     #[cfg(feature = "alloc")]
     pub fn read_i24s_le(bytes: &[u8]) -> Option<Vec<I24>> {
-        if bytes.len() % 3 != 0 {
+        if !bytes.len().is_multiple_of(3) {
             return None;
         }
 
@@ -761,6 +763,32 @@ impl I24 {
         bytes.chunks_exact(3).for_each(|chunk| {
             result.push(I24::from_le_bytes([chunk[0], chunk[1], chunk[2]]));
         });
+
+        Some(result)
+    }
+
+    /// Converts a byte slice in little-endian order to a slice of I24 values.
+    ///
+    /// This method interprets the input byte slice as a sequence of 24-bit integers
+    /// stored in little-endian format. Each `I24` value requires exactly 3 bytes.
+    ///
+    /// # Arguments
+    ///
+    /// * `bytes` - A byte slice containing 24-bit integers in little-endian format.
+    ///   The length must be a multiple of 3.
+    ///
+    /// # Returns
+    ///
+    /// `Some(&[I24])` containing a slice view of the parsed values, or `None` if the input slice
+    /// length is not a multiple of 3.
+    #[cfg(feature = "alloc")]
+    pub const fn read_i24s_le_slice(bytes: &[u8]) -> Option<&[I24]> {
+        if !bytes.len().is_multiple_of(3) {
+            return None;
+        }
+
+        let result =
+            unsafe { core::slice::from_raw_parts(bytes.as_ptr() as *const I24, bytes.len() / 3) };
 
         Some(result)
     }
@@ -774,7 +802,7 @@ impl I24 {
     /// # Arguments
     ///
     /// * `bytes` - A byte slice containing 24-bit unsigned integers in big-endian format.
-    ///            The length must be a multiple of 3.
+    ///   The length must be a multiple of 3.
     ///
     /// # Returns
     ///
@@ -782,7 +810,7 @@ impl I24 {
     /// length is not a multiple of 3.
     #[cfg(feature = "alloc")]
     pub fn read_i24s_be(bytes: &[u8]) -> Option<Vec<I24>> {
-        if bytes.len() % 3 != 0 {
+        if !bytes.len().is_multiple_of(3) {
             return None;
         }
 
@@ -811,9 +839,20 @@ impl I24 {
     /// A vector containing the parsed `I24` values.
     #[cfg(feature = "alloc")]
     pub unsafe fn read_i24s_le_unchecked(bytes: &[u8]) -> Vec<I24> {
-        debug_assert!(bytes.len() % 3 == 0);
+        debug_assert!(bytes.len().is_multiple_of(3));
         let chunks: &[I24Bytes] = bytemuck::cast_slice(bytes);
         chunks.iter().map(|b| b.to_i24_le()).collect()
+    }
+
+    #[cfg(feature = "alloc")]
+    /// Reads multiple `I24` values from a byte slice in little-endian format without length validation.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that `bytes.len()` is a multiple of 3.
+    pub unsafe fn read_i24s_le_slice_unchecked(bytes: &[u8]) -> &[I24] {
+        debug_assert!(bytes.len().is_multiple_of(3));
+        unsafe { core::slice::from_raw_parts(bytes.as_ptr() as *const I24, bytes.len() / 3) }
     }
 
     /// Reads multiple `I24` values from a byte slice in big-endian format without length validation.
@@ -832,7 +871,7 @@ impl I24 {
     /// A vector containing the parsed `I24` values.
     #[cfg(feature = "alloc")]
     pub unsafe fn read_i24s_be_unchecked(bytes: &[u8]) -> Vec<I24> {
-        debug_assert!(bytes.len() % 3 == 0);
+        debug_assert!(bytes.len().is_multiple_of(3));
         let chunks: &[I24Bytes] = bytemuck::cast_slice(bytes);
         chunks.iter().map(|b| b.to_i24_be()).collect()
     }
@@ -869,7 +908,7 @@ impl I24 {
     /// length is not a multiple of 3.
     #[cfg(feature = "alloc")]
     pub fn read_i24s_ne(bytes: &[u8]) -> Option<Vec<I24>> {
-        if bytes.len() % 3 != 0 {
+        if !bytes.len().is_multiple_of(3) {
             return None;
         }
 
@@ -1808,7 +1847,7 @@ pub(crate) mod python {
 /// use i24::I24Bytes;
 ///
 /// // Convert from I24 to wire format
-/// let value = i24::I24::try_from(123456).unwrap();
+/// let value = i24::I24::try_from(123456).expect("Test value should convert successfully");
 /// let wire_bytes = I24Bytes::from_i24_le(value);
 ///
 /// // Convert back to I24
@@ -1841,7 +1880,7 @@ impl I24Bytes {
     ///
     /// let wire = I24Bytes([0x40, 0xE2, 0x01]); // 123456 in little-endian
     /// let value = wire.to_i24_le();
-    /// assert_eq!(value, i24::I24::try_from(123456).unwrap());
+    /// assert_eq!(value, i24::I24::try_from(123456).expect("Test value should convert successfully"));
     /// ```
     #[inline]
     pub const fn to_i24_le(self) -> I24 {
@@ -1857,7 +1896,7 @@ impl I24Bytes {
     ///
     /// let wire = I24Bytes([0x01, 0xE2, 0x40]); // 123456 in big-endian
     /// let value = wire.to_i24_be();
-    /// assert_eq!(value, i24::I24::try_from(123456).unwrap());
+    /// assert_eq!(value, i24::I24::try_from(123456).expect("Test value should convert successfully"));
     /// ```
     #[inline]
     pub const fn to_i24_be(self) -> I24 {
@@ -1871,7 +1910,7 @@ impl I24Bytes {
     /// ```
     /// use i24::I24Bytes;
     ///
-    /// let original = i24::I24::try_from(123456).unwrap();
+    /// let original = i24::I24::try_from(123456).expect("Test value should convert successfully");
     /// let wire = I24Bytes::from_i24_ne(original);
     /// let value = wire.to_i24_ne();
     /// assert_eq!(value, original);
@@ -1888,7 +1927,7 @@ impl I24Bytes {
     /// ```
     /// use i24::I24Bytes;
     ///
-    /// let value = i24::I24::try_from(123456).unwrap();
+    /// let value = i24::I24::try_from(123456).expect("Test value should convert successfully");
     /// let wire = I24Bytes::from_i24_le(value);
     /// assert_eq!(wire.0, [0x40, 0xE2, 0x01]); // little-endian bytes
     /// ```
@@ -1904,7 +1943,7 @@ impl I24Bytes {
     /// ```
     /// use i24::I24Bytes;
     ///
-    /// let value = i24::I24::try_from(123456).unwrap();
+    /// let value = i24::I24::try_from(123456).expect("Test value should convert successfully");
     /// let wire = I24Bytes::from_i24_be(value);
     /// assert_eq!(wire.0, [0x01, 0xE2, 0x40]); // big-endian bytes
     /// ```
@@ -1920,7 +1959,7 @@ impl I24Bytes {
     /// ```
     /// use i24::I24Bytes;
     ///
-    /// let value = i24::I24::try_from(123456).unwrap();
+    /// let value = i24::I24::try_from(123456).expect("Test value should convert successfully");
     /// let wire = I24Bytes::from_i24_ne(value);
     /// // Byte order depends on target architecture endianness
     /// ```
@@ -2130,7 +2169,7 @@ mod i24_tests {
 
     #[test]
     fn test_zero_and_one() {
-        assert_eq!(I24::zero(), I24::try_from_i32(0).unwrap());
+        assert_eq!(I24::zero(), I24::try_from_i32(0).expect("Zero should convert successfully"));
 
         assert_eq!(I24::zero(), i24!(0));
         assert_eq!(I24::one(), i24!(1));
@@ -2138,16 +2177,16 @@ mod i24_tests {
 
     #[test]
     fn test_from_str() {
-        assert_eq!(I24::from_str("100").unwrap(), i24!(100));
-        assert_eq!(I24::from_str("-100").unwrap(), i24!(-100));
-        assert_eq!(I24::from_str(&format!("{}", I24::MAX)).unwrap(), I24::MAX);
-        assert_eq!(I24::from_str(&format!("{}", I24::MIN)).unwrap(), I24::MIN);
+        assert_eq!(I24::from_str("100").expect("100 should parse successfully"), i24!(100));
+        assert_eq!(I24::from_str("-100").expect("-100 should parse successfully"), i24!(-100));
+        assert_eq!(I24::from_str(&format!("{}", I24::MAX)).expect("MAX should parse successfully"), I24::MAX);
+        assert_eq!(I24::from_str(&format!("{}", I24::MIN)).expect("MIN should parse successfully"), I24::MIN);
         assert_eq!(
-            *I24::from_str("8388608").unwrap_err().kind(),
+            *I24::from_str("8388608").expect_err("Expected parse error").kind(),
             IntErrorKind::PosOverflow
         );
         assert_eq!(
-            *I24::from_str("-8388609").unwrap_err().kind(),
+            *I24::from_str("-8388609").expect_err("Expected parse error").kind(),
             IntErrorKind::NegOverflow
         );
     }
@@ -2217,7 +2256,7 @@ mod i24_tests {
     #[test]
     fn test_to_from_i32() {
         for i in I24Repr::MIN..=I24Repr::MAX {
-            assert_eq!(I24::try_from_i32(i).unwrap().to_i32(), i)
+            assert_eq!(I24::try_from_i32(i).expect("Value in range should convert successfully").to_i32(), i)
         }
     }
 
@@ -2226,7 +2265,7 @@ mod i24_tests {
         macro_rules! impl_t {
             ($($ty: ty),+) => {{$(
                 for x in <$ty>::MIN..=<$ty>::MAX {
-                    assert_eq!(<$ty>::try_from(I24::from(x).to_i32()).unwrap(), x)
+                    assert_eq!(<$ty>::try_from(I24::from(x).to_i32()).expect("Value should convert back"), x)
                 }
             )+}};
         }
@@ -2242,13 +2281,13 @@ mod i24_tests {
         macro_rules! impl_t {
             (signed $($ty: ty),+) => {{$(
                 for x in I24Repr::MIN..=I24Repr::MAX {
-                    assert_eq!(I24::try_from(<$ty>::from(x)).unwrap().to_i32(), x)
+                    assert_eq!(I24::try_from(<$ty>::from(x)).expect("Value should convert successfully").to_i32(), x)
                 }
             )+}};
 
             (unsigned $($ty: ty),+) => {{$(
                 for x in 0..=I24Repr::MAX {
-                    assert_eq!(I24::try_from(<$ty>::try_from(x).unwrap()).unwrap().to_i32(), x)
+                    assert_eq!(I24::try_from(<$ty>::try_from(x).expect("Value should fit in type")).expect("Value should convert to I24").to_i32(), x)
                 }
             )+}};
         }
@@ -2484,26 +2523,26 @@ mod i24_tests {
         // Test data
         let original = TestDataStruct {
             t: 0x12345678,
-            ch1: I24::try_from_i32(0x123456).unwrap(),
-            ch2: I24::try_from_i32(-1000).unwrap(),
-            ch3: I24::try_from_i32(0).unwrap(),
-            ch4: I24::try_from_i32(8388607).unwrap(), // MAX
-            s: I24::try_from_i32(-8388608).unwrap(),  // MIN
+            ch1: I24::try_from_i32(0x123456).expect("Test value should convert successfully"),
+            ch2: I24::try_from_i32(-1000).expect("Test value should convert successfully"),
+            ch3: I24::try_from_i32(0).expect("Test value should convert successfully"),
+            ch4: I24::try_from_i32(8388607).expect("Test value should convert successfully"), // MAX
+            s: I24::try_from_i32(-8388608).expect("Test value should convert successfully"),  // MIN
         };
 
         // Test round-trip serialization
         let packed_bytes = original.to_packed_bytes();
         assert_eq!(packed_bytes.len(), TestDataStruct::PACKED_SIZE);
 
-        let deserialized = TestDataStruct::from_packed_bytes(&packed_bytes).unwrap();
+        let deserialized = TestDataStruct::from_packed_bytes(&packed_bytes).expect("Test value should convert successfully");
         assert_eq!(original, deserialized);
 
         // Test multiple structures
-        let structs = vec![original.clone(), original.clone()];
+        let structs = vec![original.clone(), original];
         let packed_multiple = TestDataStruct::to_packed_slice(&structs);
         assert_eq!(packed_multiple.len(), 2 * TestDataStruct::PACKED_SIZE);
 
-        let deserialized_multiple = TestDataStruct::from_packed_slice(&packed_multiple).unwrap();
+        let deserialized_multiple = TestDataStruct::from_packed_slice(&packed_multiple).expect("Test value should convert successfully");
         assert_eq!(structs, deserialized_multiple);
 
         // Test invalid length handling
@@ -2517,13 +2556,12 @@ mod i24_tests {
     #[cfg(test)]
     mod property_tests {
         use super::*;
-        use core::num::IntErrorKind;
         use proptest::prelude::*;
 
         // Custom strategy to generate valid I24 values
         prop_compose! {
             fn valid_i24()(value in I24Repr::MIN..=I24Repr::MAX) -> I24 {
-                I24::try_from_i32(value).unwrap()
+                I24::try_from_i32(value).expect("Test value should convert successfully")
             }
         }
 
@@ -2537,7 +2575,7 @@ mod i24_tests {
         proptest! {
             #[test]
             fn prop_to_from_i32_roundtrip(value in I24Repr::MIN..=I24Repr::MAX) {
-                let i24_val = I24::try_from_i32(value).unwrap();
+                let i24_val = I24::try_from_i32(value).expect("Value in range should convert successfully");
                 prop_assert_eq!(i24_val.to_i32(), value);
             }
 
@@ -2667,7 +2705,7 @@ mod i24_tests {
 
                 if let Some(expected_add) = a_i32.checked_add(b_i32) {
                     if (I24Repr::MIN..=I24Repr::MAX).contains(&expected_add) {
-                        prop_assert_eq!(a.checked_add(b), Some(I24::try_from_i32(expected_add).unwrap()));
+                        prop_assert_eq!(a.checked_add(b), Some(I24::try_from_i32(expected_add).expect("Test value should convert successfully")));
                     }
                 } else {
                     prop_assert_eq!(a.checked_add(b), None);
@@ -2675,7 +2713,7 @@ mod i24_tests {
 
                 if let Some(expected_sub) = a_i32.checked_sub(b_i32) {
                     if (I24Repr::MIN..=I24Repr::MAX).contains(&expected_sub) {
-                        prop_assert_eq!(a.checked_sub(b), Some(I24::try_from_i32(expected_sub).unwrap()));
+                        prop_assert_eq!(a.checked_sub(b), Some(I24::try_from_i32(expected_sub).expect("Test value should convert successfully")));
                     }
                 } else {
                     prop_assert_eq!(a.checked_sub(b), None);
@@ -2683,7 +2721,7 @@ mod i24_tests {
 
                 if let Some(expected_mul) = a_i32.checked_mul(b_i32) {
                     if (I24Repr::MIN..=I24Repr::MAX).contains(&expected_mul) {
-                        prop_assert_eq!(a.checked_mul(b), Some(I24::try_from_i32(expected_mul).unwrap()));
+                        prop_assert_eq!(a.checked_mul(b), Some(I24::try_from_i32(expected_mul).expect("Test value should convert successfully")));
                     }
                 } else {
                     prop_assert_eq!(a.checked_mul(b), None);
@@ -2693,7 +2731,7 @@ mod i24_tests {
             #[test]
             fn prop_from_str_parse_display_roundtrip(a in valid_i24()) {
                 let s = format!("{}", a);
-                let parsed = I24::from_str(&s).unwrap();
+                let parsed = I24::from_str(&s).expect("Test value should convert successfully");
                 prop_assert_eq!(a, parsed);
             }
 
@@ -2726,7 +2764,7 @@ mod i24_tests {
                 let result = I24::try_from(value);
                 if value <= I24Repr::MAX as u32 {
                     prop_assert!(result.is_ok());
-                    prop_assert_eq!(result.unwrap().to_i32(), value as i32);
+                    prop_assert_eq!(result.expect("Test value should convert successfully").to_i32(), value as i32);
                 } else {
                     prop_assert!(result.is_err());
                 }
@@ -2737,7 +2775,7 @@ mod i24_tests {
                 let result = I24::try_from(value);
                 if (I24Repr::MIN..=I24Repr::MAX).contains(&value) {
                     prop_assert!(result.is_ok());
-                    prop_assert_eq!(result.unwrap().to_i32(), value);
+                    prop_assert_eq!(result.expect("Test value should convert successfully").to_i32(), value);
                 } else {
                     prop_assert!(result.is_err());
                 }
@@ -2768,17 +2806,17 @@ mod i24_tests {
             fn prop_bulk_serialization_roundtrip(values in proptest::collection::vec(valid_i24(), 0..100)) {
                 // Test big-endian roundtrip
                 let be_bytes = I24::write_i24s_be(&values);
-                let be_reconstructed = I24::read_i24s_be(&be_bytes).unwrap();
+                let be_reconstructed = I24::read_i24s_be(&be_bytes).expect("Test value should convert successfully");
                 prop_assert_eq!(&values, &be_reconstructed);
 
                 // Test little-endian roundtrip
                 let le_bytes = I24::write_i24s_le(&values);
-                let le_reconstructed = I24::read_i24s_le(&le_bytes).unwrap();
+                let le_reconstructed = I24::read_i24s_le(&le_bytes).expect("Test value should convert successfully");
                 prop_assert_eq!(&values, &le_reconstructed);
 
                 // Test native-endian roundtrip
                 let ne_bytes = I24::write_i24s_ne(&values);
-                let ne_reconstructed = I24::read_i24s_ne(&ne_bytes).unwrap();
+                let ne_reconstructed = I24::read_i24s_ne(&ne_bytes).expect("Test value should convert successfully");
                 prop_assert_eq!(&values, &ne_reconstructed);
             }
 
@@ -2807,17 +2845,8 @@ mod i24_tests {
                     }
                     Err(e) => {
                         // Different error types should be appropriate
-                        match e.kind() {
-                            IntErrorKind::Empty | IntErrorKind::InvalidDigit => {
-                                // These are fine for invalid strings
-                            }
-                            IntErrorKind::PosOverflow | IntErrorKind::NegOverflow => {
-                                // These indicate the number was parsed but out of range
-                            }
-                            _ => {
-                                // Any other error is acceptable too
-                            }
-                        }
+                        // Any error type is acceptable for invalid input strings
+                        let _ = e.kind();
                     }
                 }
             }
@@ -2871,8 +2900,8 @@ mod i24_tests {
         // Test that I24 ordering matches i32 ordering
         for a in [-1000, -1, 0, 1, 1000] {
             for b in [-1000, -1, 0, 1, 1000] {
-                let i24_a = I24::try_from_i32(a).unwrap();
-                let i24_b = I24::try_from_i32(b).unwrap();
+                let i24_a = I24::try_from_i32(a).expect("Test value should convert successfully");
+                let i24_b = I24::try_from_i32(b).expect("Test value should convert successfully");
 
                 assert_eq!(
                     i24_a < i24_b,
@@ -2982,7 +3011,7 @@ mod wire_tests {
         ];
 
         for &value in &test_values {
-            let i24_val = I24::try_from(value).unwrap();
+            let i24_val = I24::try_from(value).expect("Test value should convert successfully");
             let wire = I24Bytes::from_i24_le(i24_val);
             let recovered = wire.to_i24_le();
             assert_eq!(i24_val, recovered, "Round-trip failed for value: {}", value);
@@ -2997,7 +3026,7 @@ mod wire_tests {
         ];
 
         for &value in &test_values {
-            let i24_val = I24::try_from(value).unwrap();
+            let i24_val = I24::try_from(value).expect("Test value should convert successfully");
             let wire = I24Bytes::from_i24_be(i24_val);
             let recovered = wire.to_i24_be();
             assert_eq!(i24_val, recovered, "Round-trip failed for value: {}", value);
@@ -3006,7 +3035,7 @@ mod wire_tests {
 
     #[test]
     fn test_i24bytes_endianness_difference() {
-        let value = I24::try_from(0x123456).unwrap();
+        let value = I24::try_from(0x123456).expect("Test value should convert successfully");
         let le_bytes = I24Bytes::from_i24_le(value);
         let be_bytes = I24Bytes::from_i24_be(value);
 
@@ -3023,8 +3052,8 @@ mod wire_tests {
         let le_bytes = I24Bytes([0x40, 0xE2, 0x01]); // 123456 in LE
         let be_bytes = I24Bytes([0x01, 0xE2, 0x40]); // 123456 in BE
 
-        assert_eq!(le_bytes.to_i24_le(), I24::try_from(123456).unwrap());
-        assert_eq!(be_bytes.to_i24_be(), I24::try_from(123456).unwrap());
+        assert_eq!(le_bytes.to_i24_le(), I24::try_from(123456).expect("Test value should convert successfully"));
+        assert_eq!(be_bytes.to_i24_be(), I24::try_from(123456).expect("Test value should convert successfully"));
     }
 
     #[test]
@@ -3052,21 +3081,11 @@ mod wire_tests {
         assert_eq!(first_bytes, &[0x12, 0x34, 0x56]);
 
         // Test casting the byte array - use try_cast_slice for better error info
-        match bytemuck::try_cast_slice::<u8, I24Bytes>(&bytes) {
-            Ok(wire_slice) => {
-                assert_eq!(wire_slice.len(), 2);
-                assert_eq!(wire_slice[0].to_bytes(), [0x12, 0x34, 0x56]);
-                assert_eq!(wire_slice[1].to_bytes(), [0xAB, 0xCD, 0xEF]);
-            }
-            Err(e) => {
-                panic!(
-                    "Cast failed: {:?}. I24Bytes size: {}, alignment: {}",
-                    e,
-                    core::mem::size_of::<I24Bytes>(),
-                    core::mem::align_of::<I24Bytes>()
-                );
-            }
-        }
+        let wire_slice = bytemuck::try_cast_slice::<u8, I24Bytes>(&bytes)
+            .expect("Cast should succeed for properly aligned bytes");
+        assert_eq!(wire_slice.len(), 2);
+        assert_eq!(wire_slice[0].to_bytes(), [0x12, 0x34, 0x56]);
+        assert_eq!(wire_slice[1].to_bytes(), [0xAB, 0xCD, 0xEF]);
     }
 
     #[test]
@@ -3082,7 +3101,7 @@ mod wire_tests {
         }
 
         let wire = SimpleWire {
-            value: I24Bytes::from_i24_le(I24::try_from(123456).unwrap()),
+            value: I24Bytes::from_i24_le(I24::try_from(123456).expect("Test value should convert successfully")),
             padding: [0xFF],
         };
 
@@ -3092,7 +3111,7 @@ mod wire_tests {
 
         assert_eq!(
             reconstructed.value.to_i24_le(),
-            I24::try_from(123456).unwrap()
+            I24::try_from(123456).expect("Test value should convert successfully")
         );
         assert_eq!(reconstructed.padding, [0xFF]);
     }
@@ -3100,7 +3119,7 @@ mod wire_tests {
     #[test]
     fn test_i24bytes_sign_extension() {
         // Test that sign extension works correctly for negative values
-        let negative_value = I24::try_from(-1).unwrap();
+        let negative_value = I24::try_from(-1).expect("Test value should convert successfully");
         let wire_le = I24Bytes::from_i24_le(negative_value);
         let wire_be = I24Bytes::from_i24_be(negative_value);
 
@@ -3118,8 +3137,8 @@ mod wire_tests {
     fn test_i24bytes_zero_initialization() {
         let zero_wire: I24Bytes = bytemuck::Zeroable::zeroed();
         assert_eq!(zero_wire.to_bytes(), [0, 0, 0]);
-        assert_eq!(zero_wire.to_i24_le(), I24::try_from(0).unwrap());
-        assert_eq!(zero_wire.to_i24_be(), I24::try_from(0).unwrap());
+        assert_eq!(zero_wire.to_i24_le(), I24::try_from(0).expect("Test value should convert successfully"));
+        assert_eq!(zero_wire.to_i24_be(), I24::try_from(0).expect("Test value should convert successfully"));
     }
 
     #[cfg(feature = "zerocopy")]
