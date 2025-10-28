@@ -296,7 +296,8 @@ pub fn cast_native_slice<T: Pod>(bytes: &[u8]) -> Result<&[T], bytemuck::PodCast
 }
 
 #[cfg(feature = "pyo3")]
-use crate::types::{PyI24, PyU24};
+pub use crate::types::{PyI24, PyU24};
+
 #[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
 

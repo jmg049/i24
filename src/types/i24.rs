@@ -1512,16 +1512,23 @@ pub(crate) mod python {
     ///
     /// This struct provides Python bindings for the 24-bit signed integer type,
     /// allowing `I24` values to be used from Python code via PyO3.
-    #[pyclass(name = "I24")]
+    #[pyclass(name = "I24", frozen)]
     pub struct PyI24 {
         /// The wrapped `I24` value.
         pub value: I24,
     }
 
+    impl PyI24 {
+        /// Creates a new `PyI24` instance from an `I24` value.
+        pub fn new(value: I24) -> Self {
+            PyI24 { value }
+        }
+    }
+
     #[pymethods]
     impl PyI24 {
         #[new]
-        fn new(value: i32) -> PyResult<Self> {
+        fn py_new(value: i32) -> PyResult<Self> {
             match I24::try_from_i32(value) {
                 Some(v) => Ok(PyI24 { value: v }),
                 None => Err(pyo3::exceptions::PyValueError::new_err(format!(
@@ -2169,7 +2176,10 @@ mod i24_tests {
 
     #[test]
     fn test_zero_and_one() {
-        assert_eq!(I24::zero(), I24::try_from_i32(0).expect("Zero should convert successfully"));
+        assert_eq!(
+            I24::zero(),
+            I24::try_from_i32(0).expect("Zero should convert successfully")
+        );
 
         assert_eq!(I24::zero(), i24!(0));
         assert_eq!(I24::one(), i24!(1));
@@ -2177,16 +2187,32 @@ mod i24_tests {
 
     #[test]
     fn test_from_str() {
-        assert_eq!(I24::from_str("100").expect("100 should parse successfully"), i24!(100));
-        assert_eq!(I24::from_str("-100").expect("-100 should parse successfully"), i24!(-100));
-        assert_eq!(I24::from_str(&format!("{}", I24::MAX)).expect("MAX should parse successfully"), I24::MAX);
-        assert_eq!(I24::from_str(&format!("{}", I24::MIN)).expect("MIN should parse successfully"), I24::MIN);
         assert_eq!(
-            *I24::from_str("8388608").expect_err("Expected parse error").kind(),
+            I24::from_str("100").expect("100 should parse successfully"),
+            i24!(100)
+        );
+        assert_eq!(
+            I24::from_str("-100").expect("-100 should parse successfully"),
+            i24!(-100)
+        );
+        assert_eq!(
+            I24::from_str(&format!("{}", I24::MAX)).expect("MAX should parse successfully"),
+            I24::MAX
+        );
+        assert_eq!(
+            I24::from_str(&format!("{}", I24::MIN)).expect("MIN should parse successfully"),
+            I24::MIN
+        );
+        assert_eq!(
+            *I24::from_str("8388608")
+                .expect_err("Expected parse error")
+                .kind(),
             IntErrorKind::PosOverflow
         );
         assert_eq!(
-            *I24::from_str("-8388609").expect_err("Expected parse error").kind(),
+            *I24::from_str("-8388609")
+                .expect_err("Expected parse error")
+                .kind(),
             IntErrorKind::NegOverflow
         );
     }
@@ -2256,7 +2282,12 @@ mod i24_tests {
     #[test]
     fn test_to_from_i32() {
         for i in I24Repr::MIN..=I24Repr::MAX {
-            assert_eq!(I24::try_from_i32(i).expect("Value in range should convert successfully").to_i32(), i)
+            assert_eq!(
+                I24::try_from_i32(i)
+                    .expect("Value in range should convert successfully")
+                    .to_i32(),
+                i
+            )
         }
     }
 
@@ -2534,7 +2565,8 @@ mod i24_tests {
         let packed_bytes = original.to_packed_bytes();
         assert_eq!(packed_bytes.len(), TestDataStruct::PACKED_SIZE);
 
-        let deserialized = TestDataStruct::from_packed_bytes(&packed_bytes).expect("Test value should convert successfully");
+        let deserialized = TestDataStruct::from_packed_bytes(&packed_bytes)
+            .expect("Test value should convert successfully");
         assert_eq!(original, deserialized);
 
         // Test multiple structures
@@ -2542,7 +2574,8 @@ mod i24_tests {
         let packed_multiple = TestDataStruct::to_packed_slice(&structs);
         assert_eq!(packed_multiple.len(), 2 * TestDataStruct::PACKED_SIZE);
 
-        let deserialized_multiple = TestDataStruct::from_packed_slice(&packed_multiple).expect("Test value should convert successfully");
+        let deserialized_multiple = TestDataStruct::from_packed_slice(&packed_multiple)
+            .expect("Test value should convert successfully");
         assert_eq!(structs, deserialized_multiple);
 
         // Test invalid length handling
@@ -3052,8 +3085,14 @@ mod wire_tests {
         let le_bytes = I24Bytes([0x40, 0xE2, 0x01]); // 123456 in LE
         let be_bytes = I24Bytes([0x01, 0xE2, 0x40]); // 123456 in BE
 
-        assert_eq!(le_bytes.to_i24_le(), I24::try_from(123456).expect("Test value should convert successfully"));
-        assert_eq!(be_bytes.to_i24_be(), I24::try_from(123456).expect("Test value should convert successfully"));
+        assert_eq!(
+            le_bytes.to_i24_le(),
+            I24::try_from(123456).expect("Test value should convert successfully")
+        );
+        assert_eq!(
+            be_bytes.to_i24_be(),
+            I24::try_from(123456).expect("Test value should convert successfully")
+        );
     }
 
     #[test]
@@ -3101,7 +3140,9 @@ mod wire_tests {
         }
 
         let wire = SimpleWire {
-            value: I24Bytes::from_i24_le(I24::try_from(123456).expect("Test value should convert successfully")),
+            value: I24Bytes::from_i24_le(
+                I24::try_from(123456).expect("Test value should convert successfully"),
+            ),
             padding: [0xFF],
         };
 
@@ -3137,8 +3178,14 @@ mod wire_tests {
     fn test_i24bytes_zero_initialization() {
         let zero_wire: I24Bytes = bytemuck::Zeroable::zeroed();
         assert_eq!(zero_wire.to_bytes(), [0, 0, 0]);
-        assert_eq!(zero_wire.to_i24_le(), I24::try_from(0).expect("Test value should convert successfully"));
-        assert_eq!(zero_wire.to_i24_be(), I24::try_from(0).expect("Test value should convert successfully"));
+        assert_eq!(
+            zero_wire.to_i24_le(),
+            I24::try_from(0).expect("Test value should convert successfully")
+        );
+        assert_eq!(
+            zero_wire.to_i24_be(),
+            I24::try_from(0).expect("Test value should convert successfully")
+        );
     }
 
     #[cfg(feature = "zerocopy")]
