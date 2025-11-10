@@ -1239,6 +1239,12 @@ mod u24_serde {
     }
 }
 
+#[cfg(feature = "ndarray")]
+mod ndarray_support {
+    impl ndarray::ScalarOperand for crate::U24 {}
+    impl ndarray::ScalarOperand for crate::U24Bytes {}
+}
+
 #[cfg(feature = "pyo3")]
 pub(crate) mod python {
     use crate::U24;
@@ -1536,5 +1542,28 @@ pub(crate) mod python {
         fn get_dtype(py: Python<'_>) -> Bound<'_, PyArrayDescr> {
             numpy::dtype::<U24>(py)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[cfg(feature = "ndarray")]
+    #[test]
+    fn test_ndarray_scalar_operand() {
+        // Test that U24 and U24Bytes implement ScalarOperand trait
+        // This test mainly verifies the trait implementations compile correctly
+        use ndarray::ScalarOperand;
+
+        let u24_val = crate::u24!(100);
+        let u24_bytes = super::U24Bytes([0x64, 0x00, 0x00]); // 100 in little endian
+
+        // Test that we can use U24 as a scalar operand (trait bound check)
+        fn check_scalar_operand<T: ScalarOperand>(_: T) {}
+        check_scalar_operand(u24_val);
+        check_scalar_operand(u24_bytes);
+
+        // These operations should compile if ScalarOperand is properly implemented
+        // Note: actual arithmetic depends on ndarray implementing ops for U24/u32
     }
 }

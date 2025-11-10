@@ -125,6 +125,7 @@
 //! - **pyo3**: Enables Python bindings for all integer types (i24, u24)
 //! - **serde**: Enables `Serialize` and `Deserialize` traits for all integer types
 //! - **alloc**: Enables bulk I/O operations and `PackedStruct` functionality
+//! - **ndarray**: Enables `ScalarOperand` trait for use with ndarray operations
 //!
 //! ## Contributing
 //!

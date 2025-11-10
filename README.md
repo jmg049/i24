@@ -35,7 +35,7 @@ All integer types have Python bindings available via the ``pyo3`` feature.
 
 ```toml
  [dependencies]
- i24 = "2.2.3"
+ i24 = "2.2.4"
 ```
 
 or just run

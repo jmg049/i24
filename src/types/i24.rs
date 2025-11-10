@@ -1549,6 +1549,12 @@ impl ToPrimitive for I24 {
     }
 }
 
+#[cfg(feature = "ndarray")]
+mod ndarray_support {
+    impl ndarray::ScalarOperand for crate::I24 {}
+    impl ndarray::ScalarOperand for crate::I24Bytes {}
+}
+
 #[cfg(feature = "pyo3")]
 pub(crate) mod python {
     extern crate std;
@@ -3290,5 +3296,24 @@ mod wire_tests {
 
         // The zerocopy traits are derive-only in this version, so we mainly
         // test that the derives compiled successfully and basic functionality works
+    }
+
+    #[cfg(feature = "ndarray")]
+    #[test]
+    fn test_ndarray_scalar_operand() {
+        // Test that I24 and I24Bytes implement ScalarOperand trait
+        // This test mainly verifies the trait implementations compile correctly
+        use ndarray::ScalarOperand;
+
+        let i24_val = crate::i24!(100);
+        let i24_bytes = I24Bytes([0x64, 0x00, 0x00]); // 100 in little endian
+
+        // Test that we can use I24 as a scalar operand (trait bound check)
+        fn check_scalar_operand<T: ScalarOperand>(_: T) {}
+        check_scalar_operand(i24_val);
+        check_scalar_operand(i24_bytes);
+
+        // These operations should compile if ScalarOperand is properly implemented
+        // Note: actual arithmetic depends on ndarray implementing ops for I24/i32
     }
 }
