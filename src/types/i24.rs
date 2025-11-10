@@ -17,7 +17,7 @@ use core::{
     str::FromStr,
 };
 
-use num_traits::{FromPrimitive, Num, One, ToBytes, ToPrimitive, Zero};
+use num_traits::{FromPrimitive, Num, One, Signed, ToBytes, ToPrimitive, Zero};
 
 use crate::repr::I24Repr;
 use crate::{TryFromIntError, i24, out_of_range};
@@ -477,6 +477,28 @@ impl I24 {
     #[inline]
     pub const fn is_positive(self) -> bool {
         self.to_i32() > 0
+    }
+
+    /// The positive difference of two numbers.
+    ///
+    /// Returns zero if the number is less than or equal to the other,
+    /// otherwise the difference between `self` and `other` is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use i24::I24;;
+    /// assert_eq!(I24::try_from_i32(10).expect("Test value should convert successfully").abs_sub(&I24::try_from_i32(5).expect("Test value should convert successfully")), I24::try_from_i32(5).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(5).expect("Test value should convert successfully").abs_sub(&I24::try_from_i32(10).expect("Test value should convert successfully")), I24::try_from_i32(0).expect("Test value should convert successfully"));
+    /// assert_eq!(I24::try_from_i32(10).expect("Test value should convert successfully").abs_sub(&I24::try_from_i32(10).expect("Test value should convert successfully")), I24::try_from_i32(0).expect("Test value should convert successfully"));
+    /// ```
+    #[inline]
+    pub fn abs_sub(&self, other: &Self) -> Self {
+        if *self <= *other {
+            Self::zero()
+        } else {
+            *self - *other
+        }
     }
 
     /// Restricts the value to a certain interval.
@@ -1217,6 +1239,33 @@ impl Neg for I24 {
     fn neg(self) -> Self {
         // this is how you negate two's complement numbers
         I24::from_bits_truncate((!self.to_bits()) + 1)
+    }
+}
+
+impl Signed for I24 {
+    #[inline]
+    fn abs(&self) -> Self {
+        (*self).abs()
+    }
+
+    #[inline]
+    fn abs_sub(&self, other: &Self) -> Self {
+        (*self).abs_sub(other)
+    }
+
+    #[inline]
+    fn signum(&self) -> Self {
+        (*self).signum()
+    }
+
+    #[inline]
+    fn is_positive(&self) -> bool {
+        (*self).is_positive()
+    }
+
+    #[inline]
+    fn is_negative(&self) -> bool {
+        (*self).is_negative()
     }
 }
 
@@ -2987,6 +3036,44 @@ mod i24_tests {
         // Test min/max
         assert_eq!(i24!(1).min(i24!(2)), i24!(1));
         assert_eq!(i24!(2).max(i24!(1)), i24!(2));
+    }
+
+    #[test]
+    fn test_signed_trait() {
+        use num_traits::Signed;
+
+        // Test abs_sub method specifically
+        let a = i24!(10);
+        let b = i24!(5);
+        let c = i24!(-3);
+
+        // Test positive difference
+        assert_eq!(a.abs_sub(&b), i24!(5)); // 10 - 5 = 5
+
+        // Test when self <= other (should return 0)
+        assert_eq!(b.abs_sub(&a), i24!(0)); // 5 - 10 <= 0, so return 0
+        assert_eq!(a.abs_sub(&a), i24!(0)); // 10 - 10 = 0
+
+        // Test with negative numbers
+        assert_eq!(a.abs_sub(&c), i24!(13)); // 10 - (-3) = 13
+        assert_eq!(c.abs_sub(&a), i24!(0)); // -3 - 10 <= 0, so return 0
+
+        // Test that trait methods work correctly (should call our implementations)
+        assert_eq!(Signed::abs(&i24!(10)), i24!(10));
+        assert_eq!(Signed::abs(&i24!(-10)), i24!(10));
+        assert_eq!(Signed::signum(&i24!(10)), i24!(1));
+        assert_eq!(Signed::signum(&i24!(-10)), i24!(-1));
+        assert_eq!(Signed::signum(&i24!(0)), i24!(0));
+        assert!(Signed::is_positive(&i24!(10)));
+        assert!(!Signed::is_positive(&i24!(-10)));
+        assert!(!Signed::is_positive(&i24!(0)));
+        assert!(!Signed::is_negative(&i24!(10)));
+        assert!(Signed::is_negative(&i24!(-10)));
+        assert!(!Signed::is_negative(&i24!(0)));
+
+        // Test edge cases for abs_sub
+        assert_eq!(I24::MAX.abs_sub(&I24::MIN), I24::MAX - I24::MIN);
+        assert_eq!(I24::MIN.abs_sub(&I24::MAX), i24!(0));
     }
 
     #[test]

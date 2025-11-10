@@ -33,10 +33,18 @@ All integer types have Python bindings available via the ``pyo3`` feature.
 
  Add this to your`` Cargo.toml`:
 
-````toml
+```toml
  [dependencies]
- i24 = "2.2.0"
-````
+ i24 = "2.2.3"
+```
+
+or just run
+
+```bash
+cargo add i24
+```
+
+to get the latest version.
 
 ### Basic Usage
 
