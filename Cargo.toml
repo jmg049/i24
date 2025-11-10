@@ -1,6 +1,6 @@
 [package]
 name = "i24"
-version = "2.2.4"
+version = "2.2.5"
 edition = "2024"
 license = "MIT"
 description = "A Rust library for working with 24-bit integers."
@@ -33,3 +33,4 @@ pyo3 = ["std", "dep:pyo3", "dep:numpy"]
 serde = ["dep:serde"]
 zerocopy = ["dep:zerocopy"]
 ndarray = ["dep:ndarray"]
+num-cast = []

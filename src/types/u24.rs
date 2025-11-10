@@ -16,6 +16,9 @@ extern crate alloc;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use bytemuck::{NoUninit, Pod, Zeroable};
+#[cfg(feature = "num-cast")]
+use num_traits::{FromPrimitive, Num, NumCast, One, ToBytes, ToPrimitive, Zero};
+#[cfg(not(feature = "num-cast"))]
 use num_traits::{FromPrimitive, Num, One, ToBytes, ToPrimitive, Zero};
 
 use crate::repr::U24Repr;
@@ -730,6 +733,56 @@ impl ToPrimitive for U24 {
     #[inline]
     fn to_u32(&self) -> Option<u32> {
         Some(U24::to_u32(*self))
+    }
+}
+
+/// Implementation of the `NumCast` trait for `U24`.
+///
+/// This allows safe casting from any type that implements `ToPrimitive`
+/// to `U24`. The conversion returns `None` if the source value cannot
+/// be represented within the 24-bit unsigned integer range [0, 16,777,215].
+/// Negative values always return `None`.
+#[cfg(feature = "num-cast")]
+impl NumCast for U24
+{
+    /// Converts a value of type `T` to `U24`.
+    ///
+    /// # Arguments
+    ///
+    /// * `n` - The value to convert, which must implement `ToPrimitive`.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(U24)` if the conversion succeeds and the value is within range.
+    /// * `None` if the conversion fails, the value is out of range, or negative.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use i24::U24;
+    /// use num_traits::NumCast;
+    ///
+    /// // Successful conversions
+    /// assert_eq!(<U24 as NumCast>::from(1000u32), Some(U24::try_from_u32(1000).unwrap()));
+    /// assert_eq!(<U24 as NumCast>::from(500i16), Some(U24::try_from_u32(500).unwrap()));
+    ///
+    /// // Out of range or negative conversions
+    /// assert_eq!(<U24 as NumCast>::from(20_000_000u32), None);
+    /// assert_eq!(<U24 as NumCast>::from(-100i32), None);
+    /// ```
+    #[inline]
+    fn from<T: ToPrimitive>(n: T) -> Option<Self> {
+        // For U24, we need to handle both signed and unsigned sources
+        // Try signed conversion first, then unsigned if that fails
+        if let Some(as_i64) = n.to_i64() {
+            // If we can convert to i64, check if it's non-negative and fits in U24
+            if as_i64 >= 0 {
+                return Self::try_from_i64(as_i64);
+            }
+        }
+
+        // If that fails or is negative, try as unsigned
+        n.to_u64().and_then(Self::try_from_u64)
     }
 }
 
@@ -1565,5 +1618,34 @@ mod tests {
 
         // These operations should compile if ScalarOperand is properly implemented
         // Note: actual arithmetic depends on ndarray implementing ops for U24/u32
+    }
+
+    #[cfg(feature = "num-cast")]
+    #[test]
+    fn test_num_cast_trait() {
+        use super::U24;
+        use num_traits::NumCast;
+
+        // Test successful conversions from various types
+        assert_eq!(<U24 as NumCast>::from(1000u32), Some(U24::try_from_u32(1000).unwrap()));
+        assert_eq!(<U24 as NumCast>::from(500u16), Some(U24::try_from_u32(500).unwrap()));
+        assert_eq!(<U24 as NumCast>::from(100u8), Some(U24::try_from_u32(100).unwrap()));
+        assert_eq!(<U24 as NumCast>::from(200i16), Some(U24::try_from_u32(200).unwrap()));
+        assert_eq!(<U24 as NumCast>::from(50i8), Some(U24::try_from_u32(50).unwrap()));
+
+        // Test out of range conversions return None
+        assert_eq!(<U24 as NumCast>::from(20_000_000u32), None);
+        assert_eq!(<U24 as NumCast>::from(-100i32), None); // Negative values
+        assert_eq!(<U24 as NumCast>::from(-1i8), None); // Negative values
+
+        // Test edge cases
+        assert_eq!(<U24 as NumCast>::from(U24::MAX.to_u32()), Some(U24::MAX));
+        assert_eq!(<U24 as NumCast>::from(U24::MIN.to_u32()), Some(U24::MIN));
+
+        // Test floating point conversions
+        assert_eq!(<U24 as NumCast>::from(1000.0f32), Some(U24::try_from_u32(1000).unwrap()));
+        assert_eq!(<U24 as NumCast>::from(500.9f32), Some(U24::try_from_u32(500).unwrap())); // Truncated
+        assert_eq!(<U24 as NumCast>::from(1e10f64), None); // Too large
+        assert_eq!(<U24 as NumCast>::from(-100.0f32), None); // Negative
     }
 }

@@ -126,6 +126,7 @@
 //! - **serde**: Enables `Serialize` and `Deserialize` traits for all integer types
 //! - **alloc**: Enables bulk I/O operations and `PackedStruct` functionality
 //! - **ndarray**: Enables `ScalarOperand` trait for use with ndarray operations
+//! - **num-cast**: Enables `NumCast` trait implementations for safe numeric type conversion
 //!
 //! ## Contributing
 //!

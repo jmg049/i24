@@ -17,6 +17,9 @@ use core::{
     str::FromStr,
 };
 
+#[cfg(feature = "num-cast")]
+use num_traits::{FromPrimitive, Num, NumCast, One, Signed, ToBytes, ToPrimitive, Zero};
+#[cfg(not(feature = "num-cast"))]
 use num_traits::{FromPrimitive, Num, One, Signed, ToBytes, ToPrimitive, Zero};
 
 use crate::repr::I24Repr;
@@ -1549,6 +1552,45 @@ impl ToPrimitive for I24 {
     }
 }
 
+/// Implementation of the `NumCast` trait for `I24`.
+///
+/// This allows safe casting from any type that implements `ToPrimitive`
+/// to `I24`. The conversion returns `None` if the source value cannot
+/// be represented within the 24-bit signed integer range [-8,388,608, 8,388,607].
+#[cfg(feature = "num-cast")]
+impl NumCast for I24
+{
+    /// Converts a value of type `T` to `I24`.
+    ///
+    /// # Arguments
+    ///
+    /// * `n` - The value to convert, which must implement `ToPrimitive`.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(I24)` if the conversion succeeds and the value is within range.
+    /// * `None` if the conversion fails or the value is out of range.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use i24::I24;
+    /// use num_traits::NumCast;
+    ///
+    /// // Successful conversions
+    /// assert_eq!(<I24 as NumCast>::from(1000i32), Some(I24::try_from_i32(1000).unwrap()));
+    /// assert_eq!(<I24 as NumCast>::from(500u16), Some(I24::try_from_i32(500).unwrap()));
+    ///
+    /// // Out of range conversions
+    /// assert_eq!(<I24 as NumCast>::from(10_000_000i32), None);
+    /// assert_eq!(<I24 as NumCast>::from(-10_000_000i32), None);
+    /// ```
+    #[inline]
+    fn from<T: ToPrimitive>(n: T) -> Option<Self> {
+        n.to_i64().and_then(Self::try_from_i64)
+    }
+}
+
 #[cfg(feature = "ndarray")]
 mod ndarray_support {
     impl ndarray::ScalarOperand for crate::I24 {}
@@ -2351,13 +2393,13 @@ mod i24_tests {
         macro_rules! impl_t {
             ($($ty: ty),+) => {{$(
                 for x in <$ty>::MIN..=<$ty>::MAX {
-                    assert_eq!(<$ty>::try_from(I24::from(x).to_i32()).expect("Value should convert back"), x)
+                    assert_eq!(<$ty>::try_from(<I24 as From<$ty>>::from(x).to_i32()).expect("Value should convert back"), x)
                 }
             )+}};
         }
 
-        assert_eq!(I24::from(true), I24::one());
-        assert_eq!(I24::from(false), I24::zero());
+        assert_eq!(<I24 as From<bool>>::from(true), I24::one());
+        assert_eq!(<I24 as From<bool>>::from(false), I24::zero());
 
         impl_t!(i8, i16, u8, u16)
     }
@@ -2367,7 +2409,7 @@ mod i24_tests {
         macro_rules! impl_t {
             (signed $($ty: ty),+) => {{$(
                 for x in I24Repr::MIN..=I24Repr::MAX {
-                    assert_eq!(I24::try_from(<$ty>::from(x)).expect("Value should convert successfully").to_i32(), x)
+                    assert_eq!(I24::try_from(<$ty as From<i32>>::from(x)).expect("Value should convert successfully").to_i32(), x)
                 }
             )+}};
 
@@ -2825,25 +2867,25 @@ mod i24_tests {
 
             #[test]
             fn prop_try_from_u8_always_succeeds(value in any::<u8>()) {
-                let result = I24::from(value);
+                let result = <I24 as From<u8>>::from(value);
                 prop_assert_eq!(result.to_i32(), value as i32);
             }
 
             #[test]
             fn prop_try_from_i8_always_succeeds(value in any::<i8>()) {
-                let result = I24::from(value);
+                let result = <I24 as From<i8>>::from(value);
                 prop_assert_eq!(result.to_i32(), value as i32);
             }
 
             #[test]
             fn prop_try_from_u16_always_succeeds(value in any::<u16>()) {
-                let result = I24::from(value);
+                let result = <I24 as From<u16>>::from(value);
                 prop_assert_eq!(result.to_i32(), value as i32);
             }
 
             #[test]
             fn prop_try_from_i16_always_succeeds(value in any::<i16>()) {
-                let result = I24::from(value);
+                let result = <I24 as From<i16>>::from(value);
                 prop_assert_eq!(result.to_i32(), value as i32);
             }
 
@@ -3116,6 +3158,33 @@ mod i24_tests {
         assert_eq!(I24::MIN.saturating_sub(i24!(1)), I24::MIN);
         assert_eq!(I24::MIN.saturating_neg(), I24::MAX);
         assert_eq!(I24::MIN.saturating_div(i24!(-1)), I24::MAX);
+    }
+
+    #[cfg(feature = "num-cast")]
+    #[test]
+    fn test_num_cast_trait() {
+        use num_traits::NumCast;
+
+        // Test successful conversions from various types
+        assert_eq!(<I24 as NumCast>::from(1000i32), Some(I24::try_from_i32(1000).unwrap()));
+        assert_eq!(<I24 as NumCast>::from(500u16), Some(I24::try_from_i32(500).unwrap()));
+        assert_eq!(<I24 as NumCast>::from(100i8), Some(I24::try_from_i32(100).unwrap()));
+        assert_eq!(<I24 as NumCast>::from(200u8), Some(I24::try_from_i32(200).unwrap()));
+        assert_eq!(<I24 as NumCast>::from(-1000i32), Some(I24::try_from_i32(-1000).unwrap()));
+
+        // Test out of range conversions return None
+        assert_eq!(<I24 as NumCast>::from(10_000_000i32), None);
+        assert_eq!(<I24 as NumCast>::from(-10_000_000i32), None);
+        assert_eq!(<I24 as NumCast>::from(20_000_000u32), None);
+
+        // Test edge cases
+        assert_eq!(<I24 as NumCast>::from(I24::MAX.to_i32()), Some(I24::MAX));
+        assert_eq!(<I24 as NumCast>::from(I24::MIN.to_i32()), Some(I24::MIN));
+
+        // Test floating point conversions
+        assert_eq!(<I24 as NumCast>::from(1000.0f32), Some(I24::try_from_i32(1000).unwrap()));
+        assert_eq!(<I24 as NumCast>::from(-500.5f32), Some(I24::try_from_i32(-500).unwrap()));
+        assert_eq!(<I24 as NumCast>::from(1e10f64), None); // Too large
     }
 }
 #[cfg(test)]
