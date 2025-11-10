@@ -743,8 +743,7 @@ impl ToPrimitive for U24 {
 /// be represented within the 24-bit unsigned integer range [0, 16,777,215].
 /// Negative values always return `None`.
 #[cfg(feature = "num-cast")]
-impl NumCast for U24
-{
+impl NumCast for U24 {
     /// Converts a value of type `T` to `U24`.
     ///
     /// # Arguments
@@ -1627,11 +1626,26 @@ mod tests {
         use num_traits::NumCast;
 
         // Test successful conversions from various types
-        assert_eq!(<U24 as NumCast>::from(1000u32), Some(U24::try_from_u32(1000).unwrap()));
-        assert_eq!(<U24 as NumCast>::from(500u16), Some(U24::try_from_u32(500).unwrap()));
-        assert_eq!(<U24 as NumCast>::from(100u8), Some(U24::try_from_u32(100).unwrap()));
-        assert_eq!(<U24 as NumCast>::from(200i16), Some(U24::try_from_u32(200).unwrap()));
-        assert_eq!(<U24 as NumCast>::from(50i8), Some(U24::try_from_u32(50).unwrap()));
+        assert_eq!(
+            <U24 as NumCast>::from(1000u32),
+            Some(U24::try_from_u32(1000).unwrap())
+        );
+        assert_eq!(
+            <U24 as NumCast>::from(500u16),
+            Some(U24::try_from_u32(500).unwrap())
+        );
+        assert_eq!(
+            <U24 as NumCast>::from(100u8),
+            Some(U24::try_from_u32(100).unwrap())
+        );
+        assert_eq!(
+            <U24 as NumCast>::from(200i16),
+            Some(U24::try_from_u32(200).unwrap())
+        );
+        assert_eq!(
+            <U24 as NumCast>::from(50i8),
+            Some(U24::try_from_u32(50).unwrap())
+        );
 
         // Test out of range conversions return None
         assert_eq!(<U24 as NumCast>::from(20_000_000u32), None);
@@ -1643,8 +1657,14 @@ mod tests {
         assert_eq!(<U24 as NumCast>::from(U24::MIN.to_u32()), Some(U24::MIN));
 
         // Test floating point conversions
-        assert_eq!(<U24 as NumCast>::from(1000.0f32), Some(U24::try_from_u32(1000).unwrap()));
-        assert_eq!(<U24 as NumCast>::from(500.9f32), Some(U24::try_from_u32(500).unwrap())); // Truncated
+        assert_eq!(
+            <U24 as NumCast>::from(1000.0f32),
+            Some(U24::try_from_u32(1000).unwrap())
+        );
+        assert_eq!(
+            <U24 as NumCast>::from(500.9f32),
+            Some(U24::try_from_u32(500).unwrap())
+        ); // Truncated
         assert_eq!(<U24 as NumCast>::from(1e10f64), None); // Too large
         assert_eq!(<U24 as NumCast>::from(-100.0f32), None); // Negative
     }

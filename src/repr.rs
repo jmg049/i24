@@ -80,7 +80,6 @@ impl FromPrimitive for I24Repr {
     }
 }
 
-
 impl I24Repr {
     pub(super) const MAX: i32 = (1 << 23) - 1;
     pub(super) const MIN: i32 = -(1 << 23);
@@ -499,7 +498,6 @@ impl FromPrimitive for U24Repr {
         U24Repr::try_from_u32(n)
     }
 }
-
 
 impl U24Repr {
     pub(super) const MAX: u32 = (1 << 24) - 1;

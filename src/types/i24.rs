@@ -1558,8 +1558,7 @@ impl ToPrimitive for I24 {
 /// to `I24`. The conversion returns `None` if the source value cannot
 /// be represented within the 24-bit signed integer range [-8,388,608, 8,388,607].
 #[cfg(feature = "num-cast")]
-impl NumCast for I24
-{
+impl NumCast for I24 {
     /// Converts a value of type `T` to `I24`.
     ///
     /// # Arguments
@@ -3166,11 +3165,26 @@ mod i24_tests {
         use num_traits::NumCast;
 
         // Test successful conversions from various types
-        assert_eq!(<I24 as NumCast>::from(1000i32), Some(I24::try_from_i32(1000).unwrap()));
-        assert_eq!(<I24 as NumCast>::from(500u16), Some(I24::try_from_i32(500).unwrap()));
-        assert_eq!(<I24 as NumCast>::from(100i8), Some(I24::try_from_i32(100).unwrap()));
-        assert_eq!(<I24 as NumCast>::from(200u8), Some(I24::try_from_i32(200).unwrap()));
-        assert_eq!(<I24 as NumCast>::from(-1000i32), Some(I24::try_from_i32(-1000).unwrap()));
+        assert_eq!(
+            <I24 as NumCast>::from(1000i32),
+            Some(I24::try_from_i32(1000).unwrap())
+        );
+        assert_eq!(
+            <I24 as NumCast>::from(500u16),
+            Some(I24::try_from_i32(500).unwrap())
+        );
+        assert_eq!(
+            <I24 as NumCast>::from(100i8),
+            Some(I24::try_from_i32(100).unwrap())
+        );
+        assert_eq!(
+            <I24 as NumCast>::from(200u8),
+            Some(I24::try_from_i32(200).unwrap())
+        );
+        assert_eq!(
+            <I24 as NumCast>::from(-1000i32),
+            Some(I24::try_from_i32(-1000).unwrap())
+        );
 
         // Test out of range conversions return None
         assert_eq!(<I24 as NumCast>::from(10_000_000i32), None);
@@ -3182,8 +3196,14 @@ mod i24_tests {
         assert_eq!(<I24 as NumCast>::from(I24::MIN.to_i32()), Some(I24::MIN));
 
         // Test floating point conversions
-        assert_eq!(<I24 as NumCast>::from(1000.0f32), Some(I24::try_from_i32(1000).unwrap()));
-        assert_eq!(<I24 as NumCast>::from(-500.5f32), Some(I24::try_from_i32(-500).unwrap()));
+        assert_eq!(
+            <I24 as NumCast>::from(1000.0f32),
+            Some(I24::try_from_i32(1000).unwrap())
+        );
+        assert_eq!(
+            <I24 as NumCast>::from(-500.5f32),
+            Some(I24::try_from_i32(-500).unwrap())
+        );
         assert_eq!(<I24 as NumCast>::from(1e10f64), None); // Too large
     }
 }
