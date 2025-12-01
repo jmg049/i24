@@ -364,6 +364,16 @@ impl I24 {
             .and_then(Self::try_from_i32)
     }
 
+    /// Performs checked negation.
+    ///
+    /// # Returns
+    ///
+    /// `Some(I24)` if the negation was successful, or `None` if it would overflow.
+    /// This happens when negating `I24::MIN` (since `-I24::MIN` cannot be represented in 24 bits).
+    pub fn checked_neg(self) -> Option<Self> {
+        self.to_i32().checked_neg().and_then(Self::try_from_i32)
+    }
+
     /// Computes the absolute value of `self`.
     ///
     /// # Returns
@@ -1602,7 +1612,10 @@ pub(crate) mod python {
 
     use crate::I24;
     use numpy::{Element, PyArrayDescr};
-    use pyo3::prelude::*;
+    use pyo3::{
+        conversion::{FromPyObject, IntoPyObject},
+        prelude::*,
+    };
 
     /// Python wrapper for the `I24` type.
     ///
@@ -1710,6 +1723,31 @@ pub(crate) mod python {
             self.value >= other.value
         }
 
+        // Cross-type comparisons with Python int
+        fn __eq_int__(&self, other: i32) -> bool {
+            self.value.to_i32() == other
+        }
+
+        fn __ne_int__(&self, other: i32) -> bool {
+            self.value.to_i32() != other
+        }
+
+        fn __lt_int__(&self, other: i32) -> bool {
+            self.value.to_i32() < other
+        }
+
+        fn __le_int__(&self, other: i32) -> bool {
+            self.value.to_i32() <= other
+        }
+
+        fn __gt_int__(&self, other: i32) -> bool {
+            self.value.to_i32() > other
+        }
+
+        fn __ge_int__(&self, other: i32) -> bool {
+            self.value.to_i32() >= other
+        }
+
         // Arithmetic operators
         fn __add__(&self, other: &PyI24) -> PyResult<PyI24> {
             match self.value.checked_add(other.value) {
@@ -1762,18 +1800,6 @@ pub(crate) mod python {
                 None => Err(pyo3::exceptions::PyZeroDivisionError::new_err(
                     "division by zero",
                 )),
-            }
-        }
-
-        fn __neg__(&self) -> PyI24 {
-            PyI24 { value: -self.value }
-        }
-
-        fn __abs__(&self) -> PyI24 {
-            if self.value.to_i32() < 0 {
-                PyI24 { value: -self.value }
-            } else {
-                PyI24 { value: self.value }
             }
         }
 
@@ -1916,6 +1942,83 @@ pub(crate) mod python {
                 value: I24::saturating_from_i32(result),
             }
         }
+
+        // Additional Python magic methods
+        fn __hash__(&self) -> u64 {
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+            let mut hasher = DefaultHasher::new();
+            self.value.hash(&mut hasher);
+            hasher.finish()
+        }
+
+        fn __abs__(&self) -> PyResult<PyI24> {
+            let abs_val = self.value.to_i32().abs();
+            match I24::try_from_i32(abs_val) {
+                Some(val) => Ok(PyI24 { value: val }),
+                None => Err(pyo3::exceptions::PyOverflowError::new_err(
+                    "Absolute value overflow for I24::MIN",
+                )),
+            }
+        }
+
+        fn __neg__(&self) -> PyResult<PyI24> {
+            match self.value.checked_neg() {
+                Some(result) => Ok(PyI24 { value: result }),
+                None => Err(pyo3::exceptions::PyOverflowError::new_err(
+                    "I24 negation overflow",
+                )),
+            }
+        }
+
+        fn __pos__(&self) -> PyI24 {
+            PyI24 { value: self.value }
+        }
+
+        fn __invert__(&self) -> PyI24 {
+            let inverted = !self.value;
+            PyI24 { value: inverted }
+        }
+
+        // Pythonic method names
+        fn bit_length(&self) -> u32 {
+            let val = if self.value.to_i32() < 0 {
+                (!self.value.to_i32()) as u32
+            } else {
+                self.value.to_i32() as u32
+            };
+            32 - val.leading_zeros()
+        }
+
+        fn bit_count(&self) -> u32 {
+            let abs_val = self.value.to_i32().unsigned_abs();
+            abs_val.count_ones()
+        }
+
+        fn as_integer_ratio(&self) -> (i32, i32) {
+            (self.value.to_i32(), 1)
+        }
+
+        #[pyo3(signature = (ndigits = None))]
+        fn __round__(&self, ndigits: Option<i32>) -> PyResult<PyI24> {
+            match ndigits {
+                None => Ok(PyI24 { value: self.value }),
+                Some(0) => Ok(PyI24 { value: self.value }),
+                Some(_) => Ok(PyI24 { value: self.value }),
+            }
+        }
+
+        fn __ceil__(&self) -> PyI24 {
+            PyI24 { value: self.value }
+        }
+
+        fn __floor__(&self) -> PyI24 {
+            PyI24 { value: self.value }
+        }
+
+        fn __trunc__(&self) -> PyI24 {
+            PyI24 { value: self.value }
+        }
     }
 
     unsafe impl Element for I24 {
@@ -1927,6 +2030,42 @@ pub(crate) mod python {
 
         fn get_dtype(py: Python<'_>) -> Bound<'_, PyArrayDescr> {
             numpy::dtype::<I24>(py)
+        }
+    }
+
+    // IntoPyObject implementation for I24 - converts to Python int
+    impl<'py> IntoPyObject<'py> for I24 {
+        type Target = pyo3::types::PyInt;
+        type Output = Bound<'py, pyo3::types::PyInt>;
+        type Error = pyo3::PyErr;
+
+        fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+            Ok(self.to_i32().into_pyobject(py)?)
+        }
+    }
+
+    impl<'py> IntoPyObject<'py> for &I24 {
+        type Target = pyo3::types::PyInt;
+        type Output = Bound<'py, pyo3::types::PyInt>;
+        type Error = pyo3::PyErr;
+
+        fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+            Ok(self.to_i32().into_pyobject(py)?)
+        }
+    }
+
+    // FromPyObject implementation for I24 - converts from Python int
+    impl<'a, 'py> FromPyObject<'a, 'py> for I24 {
+        type Error = pyo3::PyErr;
+
+        fn extract(obj: pyo3::Borrowed<'a, 'py, pyo3::PyAny>) -> PyResult<Self> {
+            let py_int: i32 = obj.extract()?;
+            I24::try_from_i32(py_int).ok_or_else(|| {
+                pyo3::exceptions::PyOverflowError::new_err(format!(
+                    "Value {} is out of range for I24 (-8388608 to 8388607)",
+                    py_int
+                ))
+            })
         }
     }
 }
@@ -2161,6 +2300,53 @@ impl core::ops::DerefMut for I24Bytes {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+// PyO3 implementations for I24Bytes
+#[cfg(feature = "pyo3")]
+mod i24_bytes_pyo3 {
+    use super::I24Bytes;
+    use pyo3::{
+        conversion::{FromPyObject, IntoPyObject},
+        prelude::*,
+    };
+
+    // IntoPyObject implementation for I24Bytes - converts to Python bytes
+    impl<'py> IntoPyObject<'py> for I24Bytes {
+        type Target = pyo3::types::PyBytes;
+        type Output = Bound<'py, pyo3::types::PyBytes>;
+        type Error = pyo3::PyErr;
+
+        fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+            Ok(pyo3::types::PyBytes::new(py, &self.0))
+        }
+    }
+
+    impl<'py> IntoPyObject<'py> for &I24Bytes {
+        type Target = pyo3::types::PyBytes;
+        type Output = Bound<'py, pyo3::types::PyBytes>;
+        type Error = pyo3::PyErr;
+
+        fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+            Ok(pyo3::types::PyBytes::new(py, &self.0))
+        }
+    }
+
+    // FromPyObject implementation for I24Bytes - converts from Python bytes
+    impl<'a, 'py> FromPyObject<'a, 'py> for I24Bytes {
+        type Error = pyo3::PyErr;
+
+        fn extract(obj: pyo3::Borrowed<'a, 'py, pyo3::PyAny>) -> PyResult<Self> {
+            let py_bytes: &[u8] = obj.extract()?;
+            if py_bytes.len() != 3 {
+                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                    "Expected exactly 3 bytes for I24Bytes, got {}",
+                    py_bytes.len()
+                )));
+            }
+            Ok(I24Bytes([py_bytes[0], py_bytes[1], py_bytes[2]]))
+        }
     }
 }
 

@@ -1169,6 +1169,53 @@ impl DerefMut for U24Bytes {
     }
 }
 
+// PyO3 implementations for U24Bytes
+#[cfg(feature = "pyo3")]
+mod u24_bytes_pyo3 {
+    use super::U24Bytes;
+    use pyo3::{
+        conversion::{FromPyObject, IntoPyObject},
+        prelude::*,
+    };
+
+    // IntoPyObject implementation for U24Bytes - converts to Python bytes
+    impl<'py> IntoPyObject<'py> for U24Bytes {
+        type Target = pyo3::types::PyBytes;
+        type Output = Bound<'py, pyo3::types::PyBytes>;
+        type Error = pyo3::PyErr;
+
+        fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+            Ok(pyo3::types::PyBytes::new(py, &self.0))
+        }
+    }
+
+    impl<'py> IntoPyObject<'py> for &U24Bytes {
+        type Target = pyo3::types::PyBytes;
+        type Output = Bound<'py, pyo3::types::PyBytes>;
+        type Error = pyo3::PyErr;
+
+        fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+            Ok(pyo3::types::PyBytes::new(py, &self.0))
+        }
+    }
+
+    // FromPyObject implementation for U24Bytes - converts from Python bytes
+    impl<'a, 'py> FromPyObject<'a, 'py> for U24Bytes {
+        type Error = pyo3::PyErr;
+
+        fn extract(obj: pyo3::Borrowed<'a, 'py, pyo3::PyAny>) -> PyResult<Self> {
+            let py_bytes: &[u8] = obj.extract()?;
+            if py_bytes.len() != 3 {
+                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                    "Expected exactly 3 bytes for U24Bytes, got {}",
+                    py_bytes.len()
+                )));
+            }
+            Ok(U24Bytes([py_bytes[0], py_bytes[1], py_bytes[2]]))
+        }
+    }
+}
+
 // Add serde support for U24
 #[cfg(feature = "serde")]
 mod u24_serde {
@@ -1302,6 +1349,7 @@ pub(crate) mod python {
     use crate::U24;
     use numpy::{Element, PyArrayDescr};
     use pyo3::{
+        conversion::{FromPyObject, IntoPyObject},
         exceptions::{PyOverflowError, PyValueError, PyZeroDivisionError},
         prelude::*,
     };
@@ -1401,6 +1449,31 @@ pub(crate) mod python {
 
         fn __ge__(&self, other: &PyU24) -> bool {
             self.value >= other.value
+        }
+
+        // Cross-type comparisons with Python int
+        fn __eq_int__(&self, other: u32) -> bool {
+            self.value.to_u32() == other
+        }
+
+        fn __ne_int__(&self, other: u32) -> bool {
+            self.value.to_u32() != other
+        }
+
+        fn __lt_int__(&self, other: u32) -> bool {
+            self.value.to_u32() < other
+        }
+
+        fn __le_int__(&self, other: u32) -> bool {
+            self.value.to_u32() <= other
+        }
+
+        fn __gt_int__(&self, other: u32) -> bool {
+            self.value.to_u32() > other
+        }
+
+        fn __ge_int__(&self, other: u32) -> bool {
+            self.value.to_u32() >= other
         }
 
         // Arithmetic operators
@@ -1582,6 +1655,58 @@ pub(crate) mod python {
                 value: U24::saturating_from_u32(result),
             }
         }
+
+        // Additional Python magic methods
+        fn __hash__(&self) -> u64 {
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+            let mut hasher = DefaultHasher::new();
+            self.value.hash(&mut hasher);
+            hasher.finish()
+        }
+
+        fn __pos__(&self) -> PyU24 {
+            PyU24 { value: self.value }
+        }
+
+        fn __invert__(&self) -> PyU24 {
+            let inverted = !self.value;
+            PyU24 { value: inverted }
+        }
+
+        // Pythonic method names
+        fn bit_length(&self) -> u32 {
+            32 - self.value.to_u32().leading_zeros()
+        }
+
+        fn bit_count(&self) -> u32 {
+            self.value.to_u32().count_ones()
+        }
+
+        fn as_integer_ratio(&self) -> (u32, u32) {
+            (self.value.to_u32(), 1)
+        }
+
+        #[pyo3(signature = (ndigits = None))]
+        fn __round__(&self, ndigits: Option<i32>) -> PyResult<PyU24> {
+            match ndigits {
+                None => Ok(PyU24 { value: self.value }),
+                Some(0) => Ok(PyU24 { value: self.value }),
+                Some(_) => Ok(PyU24 { value: self.value }),
+            }
+        }
+
+        fn __ceil__(&self) -> PyU24 {
+            PyU24 { value: self.value }
+        }
+
+        fn __floor__(&self) -> PyU24 {
+            PyU24 { value: self.value }
+        }
+
+        fn __trunc__(&self) -> PyU24 {
+            PyU24 { value: self.value }
+        }
     }
 
     unsafe impl Element for U24 {
@@ -1593,6 +1718,42 @@ pub(crate) mod python {
 
         fn get_dtype(py: Python<'_>) -> Bound<'_, PyArrayDescr> {
             numpy::dtype::<U24>(py)
+        }
+    }
+
+    // IntoPyObject implementation for U24 - converts to Python int
+    impl<'py> IntoPyObject<'py> for U24 {
+        type Target = pyo3::types::PyInt;
+        type Output = Bound<'py, pyo3::types::PyInt>;
+        type Error = pyo3::PyErr;
+
+        fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+            Ok(self.to_u32().into_pyobject(py)?)
+        }
+    }
+
+    impl<'py> IntoPyObject<'py> for &U24 {
+        type Target = pyo3::types::PyInt;
+        type Output = Bound<'py, pyo3::types::PyInt>;
+        type Error = pyo3::PyErr;
+
+        fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+            Ok(self.to_u32().into_pyobject(py)?)
+        }
+    }
+
+    // FromPyObject implementation for U24 - converts from Python int
+    impl<'a, 'py> FromPyObject<'a, 'py> for U24 {
+        type Error = pyo3::PyErr;
+
+        fn extract(obj: pyo3::Borrowed<'a, 'py, pyo3::PyAny>) -> PyResult<Self> {
+            let py_int: u32 = obj.extract()?;
+            U24::try_from_u32(py_int).ok_or_else(|| {
+                pyo3::exceptions::PyOverflowError::new_err(format!(
+                    "Value {} is out of range for U24 (0 to 16777215)",
+                    py_int
+                ))
+            })
         }
     }
 }

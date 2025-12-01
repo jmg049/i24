@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.2.6] - 2025-12-01
+
+### Enhanced Python Integration
+
+- **PyO3 improvements** for better Python interoperability:
+  - Added `IntoPyObject` and `FromPyObject` traits for `I24`, `U24`, `I24Bytes`, and `U24Bytes`
+  - Enables seamless conversion between Rust and Python without manual wrapper calls
+  - Automatic type extraction in function parameters
+
+### New Methods
+
+- **Enhanced Python operators**:
+- `__hash__()` - Enables use in Python sets and dictionaries
+- `__abs__()` - Absolute value with proper overflow handling (I24 only)
+- `__neg__()` - Negation with overflow checking (I24 only)
+- `__pos__()` - Unary plus operator
+- `__invert__()` - Bitwise NOT operation
+- **Direct integer comparisons**: `__eq_int__()`, `__ne_int__()`, `__lt_int__()`, `__le_int__()`, `__gt_int__()`, `__ge_int__()`
+- Support for both signed (i32) and unsigned (u32) integer comparisons
+- **`bit_length()`** - Returns number of bits needed to represent the value
+- **`bit_count()`** - Population count (number of 1 bits)
+- **`as_integer_ratio()`** - Returns (value, 1) tuple for Python compatibility
+- **Mathematical operations**: `__round__()`, `__ceil__()`, `__floor__()`, `__trunc__()`
+
+
 ## \[2.2.2] - 2025-10-28
 
 - Version bump of pyo3 and numpy.
