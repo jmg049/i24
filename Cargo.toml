@@ -1,6 +1,6 @@
 [package]
 name = "i24"
-version = "2.2.6"
+version = "2.2.7"
 edition = "2024"
 license = "MIT"
 description = "A Rust library for working with 24-bit integers."

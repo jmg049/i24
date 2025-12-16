@@ -1352,7 +1352,9 @@ pub(crate) mod python {
         conversion::{FromPyObject, IntoPyObject},
         exceptions::{PyOverflowError, PyValueError, PyZeroDivisionError},
         prelude::*,
+        sync::PyOnceLock,
     };
+    use pyo3::Py;
 
     /// Python wrapper for the `U24` type.
     ///
@@ -1717,7 +1719,17 @@ pub(crate) mod python {
         }
 
         fn get_dtype(py: Python<'_>) -> Bound<'_, PyArrayDescr> {
-            numpy::dtype::<U24>(py)
+            // IMPORTANT: do not call `numpy::dtype::<U24>` here; that dispatches to
+            // `U24::get_dtype` and will recurse.
+            //
+            // `U24` is a transparent wrapper over a `u32` representation where the top byte
+            // is always zero, so exposing it as `uint32` is a correct and useful NumPy dtype.
+            static DTYPE: PyOnceLock<Py<PyArrayDescr>> = PyOnceLock::new();
+
+            DTYPE
+                .get_or_init(py, || numpy::dtype::<u32>(py).unbind())
+                .clone_ref(py)
+                .into_bound(py)
         }
     }
 

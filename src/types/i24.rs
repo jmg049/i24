@@ -1615,7 +1615,9 @@ pub(crate) mod python {
     use pyo3::{
         conversion::{FromPyObject, IntoPyObject},
         prelude::*,
+        sync::PyOnceLock,
     };
+    use pyo3::Py;
 
     /// Python wrapper for the `I24` type.
     ///
@@ -2029,7 +2031,22 @@ pub(crate) mod python {
         }
 
         fn get_dtype(py: Python<'_>) -> Bound<'_, PyArrayDescr> {
-            numpy::dtype::<I24>(py)
+            // IMPORTANT: do not call `numpy::dtype::<I24>` here; that dispatches to
+            // `I24::get_dtype` and will recurse.
+            //
+            // NumPy has no native 24-bit integer dtype, and `I24` is represented in-memory
+            // as a 4-byte value with the top byte always zero. We therefore expose it as an
+            // opaque 4-byte dtype.
+            static DTYPE: PyOnceLock<Py<PyArrayDescr>> = PyOnceLock::new();
+
+            DTYPE
+                .get_or_init(py, || {
+                    PyArrayDescr::new(py, "V4")
+                        .expect("Failed to construct NumPy dtype for I24")
+                        .unbind()
+                })
+                .clone_ref(py)
+                .into_bound(py)
         }
     }
 

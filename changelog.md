@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.2.7] - 2025-12-16
+
+- Fix Numpy Infinite recursion bug in I24 and U24
+
 ## [2.2.6] - 2025-12-01
 
 ### Enhanced Python Integration
