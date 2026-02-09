@@ -4,11 +4,11 @@ i24: 24-bit Integer Types for Python
 ======================================
 
 .. image:: https://img.shields.io/pypi/v/i24.svg
-   :target: https://pypi.org/project/i24/
+   :target: https://pypi.org/project/i24_type/
    :alt: PyPI Version
 
 .. image:: https://img.shields.io/pypi/pyversions/i24.svg
-   :target: https://pypi.org/project/i24/
+   :target: https://pypi.org/project/i24_type/
    :alt: Python Versions
 
 The ``i24`` package provides specialized 24-bit integer types for Python: **I24** (signed) and **U24** (unsigned). 

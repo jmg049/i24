@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "i24_type"
-version = "2.3.1"
+version = "2.3.2"
 description = "Python bindings for working with 24-bit integers."
 readme = "python/README.md"
 requires-python = ">=3.10"
@@ -43,7 +43,7 @@ issues = "https://github.com/jmg049/i24/issues"
 features = ["pyo3"]
 module-name = "i24"
 python-source = "python"
-include = ["**/*.pyi", "**/py.typed"]
+include = ["**/*.pyi", "**/py.typed", "logo.png"]
 exclude = ["**/examples/*", "**/tests/*", "**/*.rs"]
 
 [dependency-groups]

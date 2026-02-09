@@ -1,9 +1,12 @@
-# i24: 24-bit Integer Types for Python
+<div align="center">
 
-[![PyPI Version](https://img.shields.io/pypi/v/i24.svg)](https://pypi.org/project/i24/)
-[![Python Versions](https://img.shields.io/pypi/pyversions/i24.svg)](https://pypi.org/project/i24/)
-[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://jmg049.github.io/i24/)
+# i24: Integer Types for Rust (i24, u24)
 
+<img src="../logo.png" alt="i24 Logo" width="200"/>
+
+[![Crates.io][crate-img]][crate] [![Docs.rs][docs-img]][docs] [![PyPI][pypi-img]][pypi] [![PyDocs][docs-img-py]][docs-python] [![License: MIT][license-img]][license]
+
+</div>
 The `i24` package provides specialized 24-bit integer types for Python: **I24** (signed) and **U24** (unsigned). These types are implemented in Rust for high performance and provide a Python interface for working with 24-bit integers commonly found in audio processing, embedded systems, network protocols, and binary data formats.
 
 ## Features
@@ -345,8 +348,23 @@ This project is licensed under MIT - see the [LICENSE](https://github.com/jmg049
 
 ## Links
 
-- **PyPI**: https://pypi.org/project/i24/
+- **PyPI**: https://pypi.org/project/i24_type/
 - **Documentation**: https://jmg049.github.io/i24/
 - **Source Code**: https://github.com/jmg049/i24
 - **Issue Tracker**: https://github.com/jmg049/i24/issues
 - **Changelog**: https://github.com/jmg049/i24/blob/main/CHANGELOG.md
+
+[crate]: https://crates.io/crates/i24
+[crate-img]: https://img.shields.io/crates/v/i24?style=for-the-badge&color=009E73&label=crates.io
+
+[docs]: https://docs.rs/i24
+[docs-img]: https://img.shields.io/badge/docs.rs-online-009E73?style=for-the-badge&labelColor=gray
+
+[license-img]: https://img.shields.io/crates/l/i24?style=for-the-badge&label=license&labelColor=gray  
+[license]: https://github.com/jmg049/i24/blob/main/LICENSE
+
+[pypi]: https://pypi.org/project/i24_type/
+[pypi-img]: https://img.shields.io/pypi/v/i24_type?style=for-the-badge&color=009E73&label=PyPI
+
+[docs-python]: https://jmg049.github.io/i24/
+[docs-img-py]: https://img.shields.io/pypi/v/i24_type?style=for-the-badge&color=009E73&label=PyDocs

@@ -4,7 +4,8 @@
 
 <img src="logo.png" alt="i24 Logo" width="200"/>
 
-[![Crates.io](https://img.shields.io/crates/v/i24.svg)](https://crates.io/crates/i24)[![Docs.rs](https://docs.rs/i24/badge.svg)](https://docs.rs/i24)![MSRV: 1.70+](https://img.shields.io/badge/MSRV-1.70+-blue)
+[![Crates.io][crate-img]][crate] [![Docs.rs][docs-img]][docs] [![PyPI][pypi-img]][pypi] [![PyDocs][docs-img-py]][docs-python] [![License: MIT][license-img]][license]
+
 </div>
 
 The ``i24`` crate provides specialized integer types for Rust: **i24** (24-bit signed) and **u24** (24-bit unsigned). These types fill precision gaps in Rust's integer types and are particularly useful in audio processing, embedded systems, network protocols, and other scenarios where specific bit-width precision is required.
@@ -150,3 +151,18 @@ All types align with ``bytemuck`` safety requirements (``NoUninit``, ``Zeroable`
 ## Benchmarks
 
 The crate was tested using the code found in the [i24_benches](./i24_benches) directory of the repo. Unsurprisingly, the performance of both types matches the performance of the underlying 32-bit type.
+
+[crate]: https://crates.io/crates/i24
+[crate-img]: https://img.shields.io/crates/v/i24?style=for-the-badge&color=009E73&label=crates.io
+
+[docs]: https://docs.rs/i24
+[docs-img]: https://img.shields.io/badge/docs.rs-online-009E73?style=for-the-badge&labelColor=gray
+
+[license-img]: https://img.shields.io/crates/l/i24?style=for-the-badge&label=license&labelColor=gray  
+[license]: https://github.com/jmg049/i24/blob/main/LICENSE
+
+[pypi]: https://pypi.org/project/i24_type/
+[pypi-img]: https://img.shields.io/pypi/v/i24_type?style=for-the-badge&color=009E73&label=PyPI
+
+[docs-python]: https://jmg049.github.io/i24/
+[docs-img-py]: https://img.shields.io/pypi/v/i24_type?style=for-the-badge&color=009E73&label=PyDocs
