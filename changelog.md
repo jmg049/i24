@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.0/1] - 2026-02-09
+
+- Freshened up python bindings.
+- Added docs for the python bindings.
+
 ## [2.2.7] - 2025-12-16
 
 - Fix Numpy Infinite recursion bug in I24 and U24
