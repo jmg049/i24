@@ -5,7 +5,7 @@ use num_traits::FromPrimitive;
 
 #[derive(Debug, Copy, Clone)]
 #[repr(u8)]
-pub(crate) enum ZeroByte {
+pub enum ZeroByte {
     Zero = 0,
 }
 
@@ -21,7 +21,7 @@ unsafe impl Zeroable for ZeroByte {}
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C, align(4))]
-pub(super) struct BigEndianI24Repr {
+pub struct BigEndianI24Repr {
     // most significant byte at the start
     pub(crate) most_significant_byte: ZeroByte,
     pub(crate) data: [u8; 3],
@@ -29,7 +29,7 @@ pub(super) struct BigEndianI24Repr {
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C, align(4))]
-pub(super) struct LittleEndianI24Repr {
+pub struct LittleEndianI24Repr {
     pub(crate) data: [u8; 3],
     // most significant byte at the end
     pub(crate) most_significant_byte: ZeroByte,
@@ -39,7 +39,7 @@ pub(super) struct LittleEndianI24Repr {
 pub(super) type I24Repr = BigEndianI24Repr;
 
 #[cfg(target_endian = "little")]
-pub(super) type I24Repr = LittleEndianI24Repr;
+pub type I24Repr = LittleEndianI24Repr;
 
 const _: () =
     assert!(align_of::<u32>() == align_of::<I24Repr>() && size_of::<u32>() == size_of::<I24Repr>());
@@ -61,22 +61,22 @@ compile_error!("unknown endianness");
 impl FromPrimitive for I24Repr {
     #[inline]
     fn from_i64(n: i64) -> Option<Self> {
-        I24Repr::try_from_i64(n)
+        Self::try_from_i64(n)
     }
 
     #[inline]
     fn from_u64(n: u64) -> Option<Self> {
-        I24Repr::try_from_u64(n)
+        Self::try_from_u64(n)
     }
 
     #[inline]
     fn from_i32(n: i32) -> Option<Self> {
-        I24Repr::try_from_i32(n)
+        Self::try_from_i32(n)
     }
 
     #[inline]
     fn from_u32(n: u32) -> Option<Self> {
-        I24Repr::try_from_u32(n)
+        Self::try_from_u32(n)
     }
 }
 
@@ -209,7 +209,7 @@ impl I24Repr {
     }
 
     #[inline]
-    const fn to_le_repr(self) -> LittleEndianI24Repr {
+    const fn to_le_repr(self) -> Self {
         #[cfg(target_endian = "little")]
         {
             self
@@ -392,7 +392,7 @@ impl Ord for I24Repr {
 impl PartialEq<Self> for I24Repr {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        I24Repr::const_eq(self, other)
+        Self::const_eq(self, other)
     }
 }
 
@@ -401,7 +401,7 @@ impl Eq for I24Repr {}
 impl Hash for I24Repr {
     #[inline]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        u32::hash(self.as_bits(), state)
+        u32::hash(self.as_bits(), state);
     }
 
     #[inline]
@@ -409,13 +409,13 @@ impl Hash for I24Repr {
     where
         Self: Sized,
     {
-        u32::hash_slice(I24Repr::slice_as_bits(data), state)
+        u32::hash_slice(Self::slice_as_bits(data), state);
     }
 }
 
 impl Default for I24Repr {
     fn default() -> Self {
-        I24Repr::zeroed()
+        Self::zeroed()
     }
 }
 
@@ -446,7 +446,7 @@ const _: () = {
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C, align(4))]
-pub(super) struct BigEndianU24Repr {
+pub struct BigEndianU24Repr {
     // most significant byte at the start
     pub(crate) most_significant_byte: ZeroByte,
     pub(crate) data: [u8; 3],
@@ -454,7 +454,7 @@ pub(super) struct BigEndianU24Repr {
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C, align(4))]
-pub(super) struct LittleEndianU24Repr {
+pub struct LittleEndianU24Repr {
     pub(crate) data: [u8; 3],
     // most significant byte at the end
     pub(crate) most_significant_byte: ZeroByte,
@@ -464,7 +464,7 @@ pub(super) struct LittleEndianU24Repr {
 pub(super) type U24Repr = BigEndianU24Repr;
 
 #[cfg(target_endian = "little")]
-pub(super) type U24Repr = LittleEndianU24Repr;
+pub type U24Repr = LittleEndianU24Repr;
 
 const _: () =
     assert!(align_of::<u32>() == align_of::<U24Repr>() && size_of::<u32>() == size_of::<U24Repr>());
@@ -480,22 +480,22 @@ unsafe impl NoUninit for U24Repr {}
 impl FromPrimitive for U24Repr {
     #[inline]
     fn from_i64(n: i64) -> Option<Self> {
-        U24Repr::try_from_i64(n)
+        Self::try_from_i64(n)
     }
 
     #[inline]
     fn from_u64(n: u64) -> Option<Self> {
-        U24Repr::try_from_u64(n)
+        Self::try_from_u64(n)
     }
 
     #[inline]
     fn from_i32(n: i32) -> Option<Self> {
-        U24Repr::try_from_i32(n)
+        Self::try_from_i32(n)
     }
 
     #[inline]
     fn from_u32(n: u32) -> Option<Self> {
-        U24Repr::try_from_u32(n)
+        Self::try_from_u32(n)
     }
 }
 
@@ -636,7 +636,7 @@ impl U24Repr {
     }
 
     #[inline]
-    const fn to_le_repr(self) -> LittleEndianU24Repr {
+    const fn to_le_repr(self) -> Self {
         #[cfg(target_endian = "little")]
         {
             self
@@ -698,7 +698,7 @@ impl Ord for U24Repr {
 impl PartialEq<Self> for U24Repr {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        U24Repr::const_eq(self, other)
+        Self::const_eq(self, other)
     }
 }
 
@@ -707,7 +707,7 @@ impl Eq for U24Repr {}
 impl Hash for U24Repr {
     #[inline]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        u32::hash(self.as_bits(), state)
+        u32::hash(self.as_bits(), state);
     }
 
     #[inline]
@@ -723,7 +723,7 @@ impl Hash for U24Repr {
 
 impl Default for U24Repr {
     fn default() -> Self {
-        U24Repr::zeroed()
+        Self::zeroed()
     }
 }
 

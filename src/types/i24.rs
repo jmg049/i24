@@ -18,8 +18,7 @@ use core::{
 };
 
 #[cfg(feature = "num-cast")]
-use num_traits::{FromPrimitive, Num, NumCast, One, Signed, ToBytes, ToPrimitive, Zero};
-#[cfg(not(feature = "num-cast"))]
+use num_traits::NumCast;
 use num_traits::{FromPrimitive, Num, One, Signed, ToBytes, ToPrimitive, Zero};
 
 use crate::repr::I24Repr;
@@ -93,7 +92,7 @@ use crate::{TryFromIntError, i24, out_of_range};
 /// ## Features
 ///
 /// - **`serde`**: Enables `Serialize` and `Deserialize` support via JSON or other formats
-/// - **`pyo3`**: Exposes the `I24` type to Python via PyO3 bindings (as `I24`)
+/// - **`pyo3`**: Exposes the `I24` type to Python via `PyO3` bindings (as `I24`)
 /// - **`alloc`**: Enables `I24DiskMethods` for efficient bulk serialization/deserialization
 pub struct I24(I24Repr);
 
@@ -124,19 +123,20 @@ impl I24 {
     pub const BITS: u32 = 24;
 
     /// The smallest value that can be represented by this integer type (-2<sup>23</sup>)
-    pub const MIN: I24 = i24!(I24Repr::MIN);
+    pub const MIN: Self = i24!(I24Repr::MIN);
 
     /// The largest value that can be represented by this integer type (2<sup>23</sup> − 1).
-    pub const MAX: I24 = i24!(I24Repr::MAX);
+    pub const MAX: Self = i24!(I24Repr::MAX);
 
     /// Creates a new `I24` with all bits set to zero.
-    pub const ZERO: I24 = i24!(I24Repr::ZERO);
+    pub const ZERO: Self = i24!(I24Repr::ZERO);
 
     /// Returns a reference to the underlying 32-bit representation.
     ///
     /// The 24-bit value is stored in the lower 24 bits, with the upper 8 bits guaranteed to be zero.
     /// This method provides direct access to the internal bit representation for advanced use cases.
     #[inline]
+    #[must_use]
     pub const fn as_bits(&self) -> &u32 {
         self.0.as_bits()
     }
@@ -146,19 +146,20 @@ impl I24 {
     /// The 24-bit value is stored in the lower 24 bits, with the upper 8 bits guaranteed to be zero.
     /// This method extracts the internal bit representation for advanced use cases.
     #[inline]
+    #[must_use]
     pub const fn to_bits(self) -> u32 {
         self.0.to_bits()
     }
 
     /// Safety: see `I24Repr::from_bits`
     #[inline]
-    const unsafe fn from_bits(bits: u32) -> I24 {
+    const unsafe fn from_bits(bits: u32) -> Self {
         Self(unsafe { I24Repr::from_bits(bits) })
     }
 
     /// same as `Self::from_bits` but always truncates
     #[inline]
-    const fn from_bits_truncate(bits: u32) -> I24 {
+    const fn from_bits_truncate(bits: u32) -> Self {
         // the most significant byte is zeroed out
         Self(unsafe { I24Repr::from_bits(bits & I24Repr::BITS_MASK) })
     }
@@ -171,6 +172,7 @@ impl I24 {
     ///
     /// The 32-bit signed integer representation of this `I24`.
     #[inline]
+    #[must_use]
     pub const fn to_i32(self) -> i32 {
         self.0.to_i32()
     }
@@ -187,6 +189,7 @@ impl I24 {
     ///
     /// An `I24` instance representing the input value.
     #[inline]
+    #[must_use]
     pub const fn wrapping_from_i32(n: i32) -> Self {
         Self(I24Repr::wrapping_from_i32(n))
     }
@@ -203,12 +206,14 @@ impl I24 {
     ///
     /// An `I24` instance representing the input value.
     #[inline]
+    #[must_use]
     pub const fn saturating_from_i32(n: i32) -> Self {
         Self(I24Repr::saturating_from_i32(n))
     }
 
     /// Reverses the byte order of the integer.
     #[inline]
+    #[must_use]
     pub const fn swap_bytes(self) -> Self {
         Self(self.0.swap_bytes())
     }
@@ -216,6 +221,7 @@ impl I24 {
     /// Converts self to little endian from the target's endianness.
     /// On little endian this is a no-op. On big endian the bytes are swapped.
     #[inline]
+    #[must_use]
     pub const fn to_le(self) -> Self {
         Self(self.0.to_le())
     }
@@ -223,26 +229,30 @@ impl I24 {
     /// Converts self to big endian from the target's endianness.
     /// On big endian this is a no-op. On little endian the bytes are swapped.
     #[inline]
+    #[must_use]
     pub const fn to_be(self) -> Self {
         Self(self.0.to_be())
     }
 
     /// Return the memory representation of this integer as a byte array in native byte order.
     /// As the target platform's native endianness is used,
-    /// portable code should use to_be_bytes or to_le_bytes, as appropriate, instead.
+    /// portable code should use `to_be_bytes` or `to_le_bytes`, as appropriate, instead.
     #[inline]
+    #[must_use]
     pub const fn to_ne_bytes(self) -> [u8; 3] {
         self.0.to_ne_bytes()
     }
 
     /// Create a native endian integer value from its representation as a byte array in little endian.
     #[inline]
+    #[must_use]
     pub const fn to_le_bytes(self) -> [u8; 3] {
         self.0.to_le_bytes()
     }
 
     /// Return the memory representation of this integer as a byte array in big-endian (network) byte order.
     #[inline]
+    #[must_use]
     pub const fn to_be_bytes(self) -> [u8; 3] {
         self.0.to_be_bytes()
     }
@@ -257,6 +267,7 @@ impl I24 {
     ///
     /// An `I24` instance containing the input bytes.
     #[inline]
+    #[must_use]
     pub const fn from_ne_bytes(bytes: [u8; 3]) -> Self {
         Self(I24Repr::from_ne_bytes(bytes))
     }
@@ -271,6 +282,7 @@ impl I24 {
     ///
     /// An `I24` instance containing the input bytes.
     #[inline]
+    #[must_use]
     pub const fn from_le_bytes(bytes: [u8; 3]) -> Self {
         Self(I24Repr::from_le_bytes(bytes))
     }
@@ -285,6 +297,7 @@ impl I24 {
     ///
     /// An `I24` instance containing the input bytes interpreted as big-endian.
     #[inline]
+    #[must_use]
     pub const fn from_be_bytes(bytes: [u8; 3]) -> Self {
         Self(I24Repr::from_be_bytes(bytes))
     }
@@ -388,6 +401,7 @@ impl I24 {
     /// assert_eq!(I24::try_from_i32(-10).expect("Test value should convert successfully").abs(), I24::try_from_i32(10).expect("Test value should convert successfully"));
     /// ```
     #[inline]
+    #[must_use]
     pub fn abs(self) -> Self {
         if self.to_i32() < 0 { -self } else { self }
     }
@@ -407,6 +421,7 @@ impl I24 {
     /// assert_eq!(I24::MIN.wrapping_abs(), I24::MIN); // Wraps around
     /// ```
     #[inline]
+    #[must_use]
     pub fn wrapping_abs(self) -> Self {
         if self.to_i32() < 0 { -self } else { self }
     }
@@ -426,6 +441,7 @@ impl I24 {
     /// assert_eq!(I24::MIN.saturating_abs(), I24::MAX); // Saturates to MAX
     /// ```
     #[inline]
+    #[must_use]
     pub fn saturating_abs(self) -> Self {
         if self == Self::MIN {
             Self::MAX
@@ -453,6 +469,7 @@ impl I24 {
     /// assert_eq!(I24::try_from_i32(-10).expect("Test value should convert successfully").signum(), I24::try_from_i32(-1).expect("Test value should convert successfully"));
     /// ```
     #[inline]
+    #[must_use]
     pub fn signum(self) -> Self {
         let val = self.to_i32();
         match val.cmp(&0) {
@@ -473,6 +490,7 @@ impl I24 {
     /// assert!(I24::try_from_i32(-10).expect("Test value should convert successfully").is_negative());
     /// ```
     #[inline]
+    #[must_use]
     pub const fn is_negative(self) -> bool {
         self.to_i32() < 0
     }
@@ -488,6 +506,7 @@ impl I24 {
     /// assert!(!I24::try_from_i32(-10).expect("Test value should convert successfully").is_positive());
     /// ```
     #[inline]
+    #[must_use]
     pub const fn is_positive(self) -> bool {
         self.to_i32() > 0
     }
@@ -506,6 +525,7 @@ impl I24 {
     /// assert_eq!(I24::try_from_i32(10).expect("Test value should convert successfully").abs_sub(&I24::try_from_i32(10).expect("Test value should convert successfully")), I24::try_from_i32(0).expect("Test value should convert successfully"));
     /// ```
     #[inline]
+    #[must_use]
     pub fn abs_sub(&self, other: &Self) -> Self {
         if *self <= *other {
             Self::zero()
@@ -532,6 +552,7 @@ impl I24 {
     /// assert_eq!(I24::try_from_i32(2).expect("Test value should convert successfully").clamp(I24::try_from_i32(-2).expect("Test value should convert successfully"), I24::try_from_i32(1).expect("Test value should convert successfully")), I24::try_from_i32(1).expect("Test value should convert successfully"));
     /// ```
     #[inline]
+    #[must_use]
     pub fn clamp(self, min: Self, max: Self) -> Self {
         assert!(min <= max);
         if self < min {
@@ -553,6 +574,7 @@ impl I24 {
     /// assert_eq!(I24::try_from_i32(2).expect("Test value should convert successfully").min(I24::try_from_i32(1).expect("Test value should convert successfully")), I24::try_from_i32(1).expect("Test value should convert successfully"));
     /// ```
     #[inline]
+    #[must_use]
     pub fn min(self, other: Self) -> Self {
         if self <= other { self } else { other }
     }
@@ -567,6 +589,7 @@ impl I24 {
     /// assert_eq!(I24::try_from_i32(2).expect("Test value should convert successfully").max(I24::try_from_i32(1).expect("Test value should convert successfully")), I24::try_from_i32(2).expect("Test value should convert successfully"));
     /// ```
     #[inline]
+    #[must_use]
     pub fn max(self, other: Self) -> Self {
         if self >= other { self } else { other }
     }
@@ -581,6 +604,7 @@ impl I24 {
     /// assert_eq!(I24::MAX.wrapping_add(I24::try_from_i32(2).expect("Test value should convert successfully")), I24::MIN + I24::try_from_i32(1).expect("Test value should convert successfully"));
     /// ```
     #[inline]
+    #[must_use]
     pub fn wrapping_add(self, rhs: Self) -> Self {
         self + rhs // Addition already wraps
     }
@@ -595,6 +619,7 @@ impl I24 {
     /// assert_eq!(I24::MIN.wrapping_sub(I24::try_from_i32(1).expect("Test value should convert successfully")), I24::MAX);
     /// ```
     #[inline]
+    #[must_use]
     pub fn wrapping_sub(self, rhs: Self) -> Self {
         self - rhs // Subtraction already wraps
     }
@@ -609,6 +634,7 @@ impl I24 {
     /// assert_eq!(I24::try_from_i32(25).expect("Test value should convert successfully").wrapping_mul(I24::try_from_i32(4).expect("Test value should convert successfully")), I24::try_from_i32(100).expect("Test value should convert successfully"));
     /// ```
     #[inline]
+    #[must_use]
     pub fn wrapping_mul(self, rhs: Self) -> Self {
         self * rhs // Multiplication already wraps
     }
@@ -630,6 +656,7 @@ impl I24 {
     /// assert_eq!(I24::MIN.wrapping_div(I24::try_from_i32(-1).expect("Test value should convert successfully")), I24::MIN); // Wraps around
     /// ```
     #[inline]
+    #[must_use]
     pub fn wrapping_div(self, rhs: Self) -> Self {
         self / rhs // Division already wraps for the MIN / -1 case
     }
@@ -651,6 +678,7 @@ impl I24 {
     /// assert_eq!(I24::MIN.wrapping_rem(I24::try_from_i32(-1).expect("Test value should convert successfully")), I24::try_from_i32(0).expect("Test value should convert successfully")); // Wraps around
     /// ```
     #[inline]
+    #[must_use]
     pub fn wrapping_rem(self, rhs: Self) -> Self {
         self % rhs // Remainder already wraps for the MIN % -1 case
     }
@@ -665,6 +693,7 @@ impl I24 {
     /// assert_eq!(I24::MIN.wrapping_neg(), I24::MIN); // Wraps around
     /// ```
     #[inline]
+    #[must_use]
     pub fn wrapping_neg(self) -> Self {
         -self // Negation already wraps
     }
@@ -680,6 +709,7 @@ impl I24 {
     /// assert_eq!(I24::MIN.saturating_add(I24::try_from_i32(-1).expect("Test value should convert successfully")), I24::MIN);
     /// ```
     #[inline]
+    #[must_use]
     pub fn saturating_add(self, rhs: Self) -> Self {
         self.to_i32()
             .saturating_add(rhs.to_i32())
@@ -704,6 +734,7 @@ impl I24 {
     /// assert_eq!(I24::MAX.saturating_sub(I24::try_from_i32(-1).expect("Test value should convert successfully")), I24::MAX);
     /// ```
     #[inline]
+    #[must_use]
     pub fn saturating_sub(self, rhs: Self) -> Self {
         self.to_i32()
             .saturating_sub(rhs.to_i32())
@@ -728,6 +759,7 @@ impl I24 {
     /// assert_eq!(I24::try_from_i32(-1000000).expect("Test value should convert successfully").saturating_mul(I24::try_from_i32(10).expect("Test value should convert successfully")), I24::MIN);
     /// ```
     #[inline]
+    #[must_use]
     pub const fn saturating_mul(self, rhs: Self) -> Self {
         let result = self.to_i32().saturating_mul(rhs.to_i32());
         Self::saturating_from_i32(result)
@@ -750,6 +782,7 @@ impl I24 {
     /// assert_eq!(I24::MIN.saturating_div(I24::try_from_i32(-1).expect("Test value should convert successfully")), I24::MAX); // Saturates
     /// ```
     #[inline]
+    #[must_use]
     pub fn saturating_div(self, rhs: Self) -> Self {
         if self == Self::MIN && rhs.to_i32() == -1 {
             Self::MAX
@@ -768,6 +801,7 @@ impl I24 {
     /// assert_eq!(I24::MIN.saturating_neg(), I24::MAX); // Saturates
     /// ```
     #[inline]
+    #[must_use]
     pub fn saturating_neg(self) -> Self {
         if self == Self::MIN { Self::MAX } else { -self }
     }
@@ -1080,7 +1114,7 @@ impl_bin_op! {
 
 impl Hash for I24 {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        I24Repr::hash(&self.0, state)
+        I24Repr::hash(&self.0, state);
     }
 
     fn hash_slice<H: Hasher>(data: &[Self], state: &mut H)
@@ -1091,7 +1125,7 @@ impl Hash for I24 {
         I24Repr::hash_slice(
             unsafe { core::mem::transmute::<&[Self], &[I24Repr]>(data) },
             state,
-        )
+        );
     }
 }
 
@@ -1169,21 +1203,21 @@ impl From<I24> for i32 {
 impl From<I24> for i64 {
     #[inline]
     fn from(value: I24) -> Self {
-        value.to_i32() as i64
+        Self::from(value.to_i32())
     }
 }
 
 impl From<I24> for i128 {
     #[inline]
     fn from(value: I24) -> Self {
-        value.to_i32() as i128
+        Self::from(value.to_i32())
     }
 }
 
 impl From<I24> for isize {
     #[inline]
     fn from(value: I24) -> Self {
-        value.to_i32() as isize
+        value.to_i32() as Self
     }
 }
 
@@ -1251,7 +1285,7 @@ impl Neg for I24 {
     #[inline]
     fn neg(self) -> Self {
         // this is how you negate two's complement numbers
-        I24::from_bits_truncate((!self.to_bits()) + 1)
+        Self::from_bits_truncate((!self.to_bits()) + 1)
     }
 }
 
@@ -1287,7 +1321,7 @@ impl Not for I24 {
 
     #[inline]
     fn not(self) -> Self {
-        I24::from_bits_truncate(!self.to_bits())
+        Self::from_bits_truncate(!self.to_bits())
     }
 }
 
@@ -1329,14 +1363,14 @@ impl Shr<u32> for I24 {
 impl ShrAssign<u32> for I24 {
     #[inline]
     fn shr_assign(&mut self, rhs: u32) {
-        *self = Shr::shr(*self, rhs)
+        *self = Shr::shr(*self, rhs);
     }
 }
 
 impl ShlAssign<u32> for I24 {
     #[inline]
     fn shl_assign(&mut self, rhs: u32) {
-        *self = Shl::shl(*self, rhs)
+        *self = Shl::shl(*self, rhs);
     }
 }
 
@@ -1469,30 +1503,30 @@ impl ToBytes for I24 {
 impl ToPrimitive for I24 {
     #[inline]
     fn to_i64(&self) -> Option<i64> {
-        Some(I24::to_i32(*self) as i64)
+        Some(i64::from(Self::to_i32(*self)))
     }
 
     #[inline]
     fn to_u64(&self) -> Option<u64> {
-        let val = I24::to_i32(*self);
+        let val = Self::to_i32(*self);
         if val < 0 { None } else { Some(val as u64) }
     }
 
     #[inline]
     fn to_i32(&self) -> Option<i32> {
-        Some(I24::to_i32(*self))
+        Some(Self::to_i32(*self))
     }
 
     #[inline]
     fn to_u32(&self) -> Option<u32> {
-        let val = I24::to_i32(*self);
+        let val = Self::to_i32(*self);
         if val < 0 { None } else { Some(val as u32) }
     }
 
     #[inline]
     fn to_i16(&self) -> Option<i16> {
-        let val = I24::to_i32(*self);
-        if val < i16::MIN as i32 || val > i16::MAX as i32 {
+        let val = Self::to_i32(*self);
+        if val < i32::from(i16::MIN) || val > i32::from(i16::MAX) {
             None
         } else {
             Some(val as i16)
@@ -1501,8 +1535,8 @@ impl ToPrimitive for I24 {
 
     #[inline]
     fn to_u16(&self) -> Option<u16> {
-        let val = I24::to_i32(*self);
-        if val < 0 || val > u16::MAX as i32 {
+        let val = Self::to_i32(*self);
+        if val < 0 || val > i32::from(u16::MAX) {
             None
         } else {
             Some(val as u16)
@@ -1511,8 +1545,8 @@ impl ToPrimitive for I24 {
 
     #[inline]
     fn to_i8(&self) -> Option<i8> {
-        let val = I24::to_i32(*self);
-        if val < i8::MIN as i32 || val > i8::MAX as i32 {
+        let val = Self::to_i32(*self);
+        if val < i32::from(i8::MIN) || val > i32::from(i8::MAX) {
             None
         } else {
             Some(val as i8)
@@ -1521,8 +1555,8 @@ impl ToPrimitive for I24 {
 
     #[inline]
     fn to_u8(&self) -> Option<u8> {
-        let val = I24::to_i32(*self);
-        if val < 0 || val > u8::MAX as i32 {
+        let val = Self::to_i32(*self);
+        if val < 0 || val > i32::from(u8::MAX) {
             None
         } else {
             Some(val as u8)
@@ -1531,33 +1565,33 @@ impl ToPrimitive for I24 {
 
     #[inline]
     fn to_isize(&self) -> Option<isize> {
-        Some(I24::to_i32(*self) as isize)
+        Some(Self::to_i32(*self) as isize)
     }
 
     #[inline]
     fn to_usize(&self) -> Option<usize> {
-        let val = I24::to_i32(*self);
+        let val = Self::to_i32(*self);
         if val < 0 { None } else { Some(val as usize) }
     }
 
     #[inline]
     fn to_f32(&self) -> Option<f32> {
-        Some(I24::to_i32(*self) as f32)
+        Some(Self::to_i32(*self) as f32)
     }
 
     #[inline]
     fn to_f64(&self) -> Option<f64> {
-        Some(I24::to_i32(*self) as f64)
+        Some(f64::from(Self::to_i32(*self)))
     }
 
     #[inline]
     fn to_i128(&self) -> Option<i128> {
-        Some(I24::to_i32(*self) as i128)
+        Some(i128::from(Self::to_i32(*self)))
     }
 
     #[inline]
     fn to_u128(&self) -> Option<u128> {
-        let val = I24::to_i32(*self);
+        let val = Self::to_i32(*self);
         if val < 0 { None } else { Some(val as u128) }
     }
 }
@@ -1607,22 +1641,23 @@ mod ndarray_support {
 }
 
 #[cfg(feature = "pyo3")]
-pub(crate) mod python {
+pub mod python {
     extern crate std;
 
     use crate::I24;
     use numpy::{Element, PyArrayDescr};
+    use pyo3::Py;
+    use pyo3::exceptions::PyOverflowError;
     use pyo3::{
         conversion::{FromPyObject, IntoPyObject},
         prelude::*,
         sync::PyOnceLock,
     };
-    use pyo3::Py;
 
     /// Python wrapper for the `I24` type.
     ///
     /// This struct provides Python bindings for the 24-bit signed integer type,
-    /// allowing `I24` values to be used from Python code via PyO3.
+    /// allowing `I24` values to be used from Python code via `PyO3`.
     #[pyclass(name = "I24", frozen)]
     pub struct PyI24 {
         /// The wrapped `I24` value.
@@ -1631,32 +1666,45 @@ pub(crate) mod python {
 
     impl PyI24 {
         /// Creates a new `PyI24` instance from an `I24` value.
-        pub fn new(value: I24) -> Self {
-            PyI24 { value }
+        ///
+        /// # Arguments
+        ///
+        /// * `value` - The `I24` value to wrap in the `PyI24` struct.
+        ///
+        /// # Returns
+        ///
+        /// A new `PyI24` instance containing the provided `I24` value.
+        #[must_use]
+        pub const fn new(value: I24) -> Self {
+            Self { value }
         }
     }
 
     #[pymethods]
     impl PyI24 {
         #[new]
+        #[pyo3(signature = (value: "int"), text_signature = "(value: int) -> None")]
         fn py_new(value: i32) -> PyResult<Self> {
-            match I24::try_from_i32(value) {
-                Some(v) => Ok(PyI24 { value: v }),
-                None => Err(pyo3::exceptions::PyValueError::new_err(format!(
-                    "Value {} is out of range for I24 (-8388608 to 8388607)",
-                    value
-                ))),
-            }
+            I24::try_from_i32(value).map_or_else(
+                || {
+                    Err(pyo3::exceptions::PyValueError::new_err(
+                        "value must be between -8388608 and 8388607",
+                    ))
+                },
+                |i24| Ok(Self { value: i24 }),
+            )
         }
 
         #[staticmethod]
-        fn from_bytes(bytes: &[u8], byteorder: &str) -> PyResult<Self> {
+        #[pyo3(signature = (bytes: "list[int]", byteorder: "Literal['little', 'big', 'native']" = "native"), text_signature = "(bytes: list[int], byteorder: Literal['little', 'big', 'native']) -> Self")]
+        fn from_bytes(bytes: &[u8], byteorder: Option<&str>) -> PyResult<Self> {
             if bytes.len() != 3 {
                 return Err(pyo3::exceptions::PyValueError::new_err(
                     "bytes must be exactly 3 bytes long",
                 ));
             }
             let byte_array: [u8; 3] = [bytes[0], bytes[1], bytes[2]];
+            let byteorder = byteorder.unwrap_or("native");
             let value = match byteorder {
                 "little" => I24::from_le_bytes(byte_array),
                 "big" => I24::from_be_bytes(byte_array),
@@ -1667,13 +1715,15 @@ pub(crate) mod python {
                     ));
                 }
             };
-            Ok(PyI24 { value })
+            Ok(Self { value })
         }
 
-        fn to_int(&self) -> i32 {
+        #[pyo3(signature = (), text_signature = "($self) -> int")]
+        const fn to_int(&self) -> i32 {
             self.value.to_i32()
         }
 
+        #[pyo3(signature = (byteorder: "Literal['little', 'big', 'native']" = "native"), text_signature = "($self, byteorder: Literal['little', 'big', 'native']) -> list[int]")]
         fn to_bytes(&self, byteorder: &str) -> PyResult<Vec<u8>> {
             let bytes = match byteorder {
                 "little" => self.value.to_le_bytes(),
@@ -1696,251 +1746,261 @@ pub(crate) mod python {
             format!("I24({})", self.value.to_i32())
         }
 
-        fn __int__(&self) -> i32 {
+        const fn __int__(&self) -> i32 {
             self.value.to_i32()
         }
 
         // Comparison operators
-        fn __eq__(&self, other: &PyI24) -> bool {
+        fn __eq__(&self, other: &Self) -> bool {
             self.value == other.value
         }
 
-        fn __ne__(&self, other: &PyI24) -> bool {
+        fn __ne__(&self, other: &Self) -> bool {
             self.value != other.value
         }
 
-        fn __lt__(&self, other: &PyI24) -> bool {
+        fn __lt__(&self, other: &Self) -> bool {
             self.value < other.value
         }
 
-        fn __le__(&self, other: &PyI24) -> bool {
+        fn __le__(&self, other: &Self) -> bool {
             self.value <= other.value
         }
 
-        fn __gt__(&self, other: &PyI24) -> bool {
+        fn __gt__(&self, other: &Self) -> bool {
             self.value > other.value
         }
 
-        fn __ge__(&self, other: &PyI24) -> bool {
+        fn __ge__(&self, other: &Self) -> bool {
             self.value >= other.value
         }
 
         // Cross-type comparisons with Python int
-        fn __eq_int__(&self, other: i32) -> bool {
+        const fn __eq_int__(&self, other: i32) -> bool {
             self.value.to_i32() == other
         }
 
-        fn __ne_int__(&self, other: i32) -> bool {
+        const fn __ne_int__(&self, other: i32) -> bool {
             self.value.to_i32() != other
         }
 
-        fn __lt_int__(&self, other: i32) -> bool {
+        const fn __lt_int__(&self, other: i32) -> bool {
             self.value.to_i32() < other
         }
 
-        fn __le_int__(&self, other: i32) -> bool {
+        const fn __le_int__(&self, other: i32) -> bool {
             self.value.to_i32() <= other
         }
 
-        fn __gt_int__(&self, other: i32) -> bool {
+        const fn __gt_int__(&self, other: i32) -> bool {
             self.value.to_i32() > other
         }
 
-        fn __ge_int__(&self, other: i32) -> bool {
+        const fn __ge_int__(&self, other: i32) -> bool {
             self.value.to_i32() >= other
         }
 
         // Arithmetic operators
-        fn __add__(&self, other: &PyI24) -> PyResult<PyI24> {
-            match self.value.checked_add(other.value) {
-                Some(result) => Ok(PyI24 { value: result }),
-                None => Err(pyo3::exceptions::PyOverflowError::new_err(
-                    "I24 addition overflow",
-                )),
-            }
+        fn __add__(&self, other: &Self) -> PyResult<Self> {
+            self.value.checked_add(other.value).map_or_else(
+                || Err(PyOverflowError::new_err("I24 addition overflow")),
+                |result| Ok(Self { value: result }),
+            )
         }
 
-        fn __sub__(&self, other: &PyI24) -> PyResult<PyI24> {
-            match self.value.checked_sub(other.value) {
-                Some(result) => Ok(PyI24 { value: result }),
-                None => Err(pyo3::exceptions::PyOverflowError::new_err(
-                    "I24 subtraction overflow",
-                )),
-            }
+        fn __sub__(&self, other: &Self) -> PyResult<Self> {
+            self.value.checked_sub(other.value).map_or_else(
+                || Err(PyOverflowError::new_err("I24 subtraction overflow")),
+                |result| Ok(Self { value: result }),
+            )
         }
 
-        fn __mul__(&self, other: &PyI24) -> PyResult<PyI24> {
-            match self.value.checked_mul(other.value) {
-                Some(result) => Ok(PyI24 { value: result }),
-                None => Err(pyo3::exceptions::PyOverflowError::new_err(
-                    "I24 multiplication overflow",
-                )),
-            }
+        fn __mul__(&self, other: &Self) -> PyResult<Self> {
+            self.value.checked_mul(other.value).map_or_else(
+                || Err(PyOverflowError::new_err("I24 multiplication overflow")),
+                |result| Ok(Self { value: result }),
+            )
         }
 
-        fn __truediv__(&self, other: &PyI24) -> PyResult<f64> {
+        fn __truediv__(&self, other: &Self) -> PyResult<f64> {
             if other.value.to_i32() == 0 {
                 return Err(pyo3::exceptions::PyZeroDivisionError::new_err(
                     "division by zero",
                 ));
             }
-            Ok(self.value.to_i32() as f64 / other.value.to_i32() as f64)
+            Ok(f64::from(self.value.to_i32()) / f64::from(other.value.to_i32()))
         }
 
-        fn __floordiv__(&self, other: &PyI24) -> PyResult<PyI24> {
-            match self.value.checked_div(other.value) {
-                Some(result) => Ok(PyI24 { value: result }),
-                None => Err(pyo3::exceptions::PyZeroDivisionError::new_err(
-                    "division by zero",
-                )),
-            }
+        fn __floordiv__(&self, other: &Self) -> PyResult<Self> {
+            self.value.checked_div(other.value).map_or_else(
+                || {
+                    Err(pyo3::exceptions::PyZeroDivisionError::new_err(
+                        "division by zero",
+                    ))
+                },
+                |result| Ok(Self { value: result }),
+            )
         }
 
-        fn __mod__(&self, other: &PyI24) -> PyResult<PyI24> {
-            match self.value.checked_rem(other.value) {
-                Some(result) => Ok(PyI24 { value: result }),
-                None => Err(pyo3::exceptions::PyZeroDivisionError::new_err(
-                    "division by zero",
-                )),
-            }
+        fn __mod__(&self, other: &Self) -> PyResult<Self> {
+            self.value.checked_rem(other.value).map_or_else(
+                || {
+                    Err(pyo3::exceptions::PyZeroDivisionError::new_err(
+                        "division by zero",
+                    ))
+                },
+                |result| Ok(Self { value: result }),
+            )
         }
 
         // Bitwise operations
-        fn __and__(&self, other: &PyI24) -> PyI24 {
-            PyI24 {
+        fn __and__(&self, other: &Self) -> Self {
+            Self {
                 value: self.value & other.value,
             }
         }
 
-        fn __or__(&self, other: &PyI24) -> PyI24 {
-            PyI24 {
+        fn __or__(&self, other: &Self) -> Self {
+            Self {
                 value: self.value | other.value,
             }
         }
 
-        fn __xor__(&self, other: &PyI24) -> PyI24 {
-            PyI24 {
+        fn __xor__(&self, other: &Self) -> Self {
+            Self {
                 value: self.value ^ other.value,
             }
         }
 
-        fn __lshift__(&self, other: u32) -> PyResult<PyI24> {
+        fn __lshift__(&self, other: u32) -> PyResult<Self> {
             if other >= 32 {
                 return Err(pyo3::exceptions::PyValueError::new_err(
                     "shift count out of range",
                 ));
             }
             let result = (self.value.to_i32() as u32) << other;
-            match I24::try_from_i32(result as i32) {
-                Some(val) => Ok(PyI24 { value: val }),
-                None => Err(pyo3::exceptions::PyOverflowError::new_err(
-                    "I24 left shift overflow",
-                )),
-            }
+            I24::try_from_i32(result as i32).map_or_else(
+                || Err(PyOverflowError::new_err("I24 left shift overflow")),
+                |val| Ok(Self { value: val }),
+            )
         }
 
-        fn __rshift__(&self, other: u32) -> PyResult<PyI24> {
+        fn __rshift__(&self, other: u32) -> PyResult<Self> {
             if other >= 32 {
                 return Err(pyo3::exceptions::PyValueError::new_err(
                     "shift count out of range",
                 ));
             }
             let result = self.value.to_i32() >> other;
-            Ok(PyI24 {
+            Ok(Self {
                 value: I24::wrapping_from_i32(result),
             })
         }
 
         // Utility methods
-        #[staticmethod]
-        fn min_value() -> PyI24 {
-            PyI24 { value: I24::MIN }
+        #[classattr]
+        const fn min_value() -> Self {
+            Self { value: I24::MIN }
         }
 
-        #[staticmethod]
-        fn max_value() -> PyI24 {
-            PyI24 { value: I24::MAX }
+        #[classattr]
+        const fn max_value() -> Self {
+            Self { value: I24::MAX }
         }
 
-        fn count_ones(&self) -> u32 {
+        #[pyo3(signature = (), text_signature = "($self) -> int")]
+        const fn count_ones(&self) -> u32 {
             self.value.to_i32().count_ones()
         }
 
-        fn count_zeros(&self) -> u32 {
+        #[pyo3(signature = (), text_signature = "($self) -> int")]
+        const fn count_zeros(&self) -> u32 {
             self.value.to_i32().count_zeros()
         }
 
-        fn leading_zeros(&self) -> u32 {
+        #[pyo3(signature = (), text_signature = "($self) -> int")]
+        const fn leading_zeros(&self) -> u32 {
             self.value.to_i32().leading_zeros()
         }
 
-        fn trailing_zeros(&self) -> u32 {
+        #[pyo3(signature = (), text_signature = "($self) -> int")]
+        const fn trailing_zeros(&self) -> u32 {
             self.value.to_i32().trailing_zeros()
         }
 
         // Checked methods
-        fn checked_add(&self, other: &PyI24) -> Option<PyI24> {
+        #[pyo3(signature = (other: "I24"), text_signature = "($self, other: I24) -> Optional[I24]")]
+        fn checked_add(&self, other: &Self) -> Option<Self> {
             self.value
                 .checked_add(other.value)
-                .map(|v| PyI24 { value: v })
+                .map(|v| Self { value: v })
         }
 
-        fn checked_sub(&self, other: &PyI24) -> Option<PyI24> {
+        #[pyo3(signature = (other: "I24"), text_signature = "($self, other: I24) -> Optional[I24]")]
+        fn checked_sub(&self, other: &Self) -> Option<Self> {
             self.value
                 .checked_sub(other.value)
-                .map(|v| PyI24 { value: v })
+                .map(|v| Self { value: v })
         }
 
-        fn checked_mul(&self, other: &PyI24) -> Option<PyI24> {
+        #[pyo3(signature = (other: "I24"), text_signature = "($self, other: I24) -> Optional[I24]")]
+        fn checked_mul(&self, other: &Self) -> Option<Self> {
             self.value
                 .checked_mul(other.value)
-                .map(|v| PyI24 { value: v })
+                .map(|v| Self { value: v })
         }
 
-        fn checked_div(&self, other: &PyI24) -> Option<PyI24> {
+        #[pyo3(signature = (other: "I24"), text_signature = "($self, other: I24) -> Optional[I24]")]
+        fn checked_div(&self, other: &Self) -> Option<Self> {
             self.value
                 .checked_div(other.value)
-                .map(|v| PyI24 { value: v })
+                .map(|v| Self { value: v })
         }
 
-        fn wrapping_add(&self, other: &PyI24) -> PyI24 {
+        #[pyo3(signature = (other: "I24"), text_signature = "($self, other: I24) -> Optional[I24]")]
+        const fn wrapping_add(&self, other: &Self) -> Self {
             let result = self.value.to_i32().wrapping_add(other.value.to_i32());
-            PyI24 {
+            Self {
                 value: I24::wrapping_from_i32(result),
             }
         }
 
-        fn wrapping_sub(&self, other: &PyI24) -> PyI24 {
+        #[pyo3(signature = (other: "I24"), text_signature = "($self, other: I24) -> Optional[I24]")]
+        const fn wrapping_sub(&self, other: &Self) -> Self {
             let result = self.value.to_i32().wrapping_sub(other.value.to_i32());
-            PyI24 {
+            Self {
                 value: I24::wrapping_from_i32(result),
             }
         }
 
-        fn wrapping_mul(&self, other: &PyI24) -> PyI24 {
+        #[pyo3(signature = (other: "I24"), text_signature = "($self, other: I24) -> Optional[I24]")]
+        const fn wrapping_mul(&self, other: &Self) -> Self {
             let result = self.value.to_i32().wrapping_mul(other.value.to_i32());
-            PyI24 {
+            Self {
                 value: I24::wrapping_from_i32(result),
             }
         }
 
-        fn saturating_add(&self, other: &PyI24) -> PyI24 {
+        #[pyo3(signature = (other: "I24"), text_signature = "($self, other: I24) -> Optional[I24]")]
+        const fn saturating_add(&self, other: &Self) -> Self {
             let result = self.value.to_i32().saturating_add(other.value.to_i32());
-            PyI24 {
+            Self {
                 value: I24::saturating_from_i32(result),
             }
         }
 
-        fn saturating_sub(&self, other: &PyI24) -> PyI24 {
+        #[pyo3(signature = (other: "I24"), text_signature = "($self, other: I24) -> Optional[I24]")]
+        const fn saturating_sub(&self, other: &Self) -> Self {
             let result = self.value.to_i32().saturating_sub(other.value.to_i32());
-            PyI24 {
+            Self {
                 value: I24::saturating_from_i32(result),
             }
         }
 
-        fn saturating_mul(&self, other: &PyI24) -> PyI24 {
+        #[pyo3(signature = (other: "I24"), text_signature = "($self, other: I24) -> Optional[I24]")]
+        const fn saturating_mul(&self, other: &Self) -> Self {
             let result = self.value.to_i32().saturating_mul(other.value.to_i32());
-            PyI24 {
+            Self {
                 value: I24::saturating_from_i32(result),
             }
         }
@@ -1954,36 +2014,42 @@ pub(crate) mod python {
             hasher.finish()
         }
 
-        fn __abs__(&self) -> PyResult<PyI24> {
+        fn __abs__(&self) -> PyResult<Self> {
             let abs_val = self.value.to_i32().abs();
-            match I24::try_from_i32(abs_val) {
-                Some(val) => Ok(PyI24 { value: val }),
-                None => Err(pyo3::exceptions::PyOverflowError::new_err(
-                    "Absolute value overflow for I24::MIN",
-                )),
-            }
+
+            I24::try_from_i32(abs_val).map_or_else(
+                || {
+                    Err(PyOverflowError::new_err(
+                        "Absolute value overflow for I24::MIN",
+                    ))
+                },
+                |v| Ok(Self { value: v }),
+            )
         }
 
-        fn __neg__(&self) -> PyResult<PyI24> {
-            match self.value.checked_neg() {
-                Some(result) => Ok(PyI24 { value: result }),
-                None => Err(pyo3::exceptions::PyOverflowError::new_err(
-                    "I24 negation overflow",
-                )),
-            }
+        fn __neg__(&self) -> PyResult<Self> {
+            self.value.checked_neg().map_or_else(
+                || {
+                    Err(PyOverflowError::new_err(
+                        "I24 negation overflow for I24::MIN",
+                    ))
+                },
+                |result| Ok(Self { value: result }),
+            )
         }
 
-        fn __pos__(&self) -> PyI24 {
-            PyI24 { value: self.value }
+        const fn __pos__(&self) -> Self {
+            Self { value: self.value }
         }
 
-        fn __invert__(&self) -> PyI24 {
+        fn __invert__(&self) -> Self {
             let inverted = !self.value;
-            PyI24 { value: inverted }
+            Self { value: inverted }
         }
 
         // Pythonic method names
-        fn bit_length(&self) -> u32 {
+        #[pyo3(signature = (), text_signature = "($self) -> int")]
+        const fn bit_length(&self) -> u32 {
             let val = if self.value.to_i32() < 0 {
                 (!self.value.to_i32()) as u32
             } else {
@@ -1992,34 +2058,27 @@ pub(crate) mod python {
             32 - val.leading_zeros()
         }
 
-        fn bit_count(&self) -> u32 {
+        #[pyo3(signature = (), text_signature = "($self) -> int")]
+        const fn bit_count(&self) -> u32 {
             let abs_val = self.value.to_i32().unsigned_abs();
             abs_val.count_ones()
         }
 
-        fn as_integer_ratio(&self) -> (i32, i32) {
+        #[pyo3(signature = (), text_signature = "($self) -> Tuple[int, int]")]
+        const fn as_integer_ratio(&self) -> (i32, i32) {
             (self.value.to_i32(), 1)
         }
 
-        #[pyo3(signature = (ndigits = None))]
-        fn __round__(&self, ndigits: Option<i32>) -> PyResult<PyI24> {
-            match ndigits {
-                None => Ok(PyI24 { value: self.value }),
-                Some(0) => Ok(PyI24 { value: self.value }),
-                Some(_) => Ok(PyI24 { value: self.value }),
-            }
+        const fn __ceil__(&self) -> Self {
+            Self { value: self.value }
         }
 
-        fn __ceil__(&self) -> PyI24 {
-            PyI24 { value: self.value }
+        const fn __floor__(&self) -> Self {
+            Self { value: self.value }
         }
 
-        fn __floor__(&self) -> PyI24 {
-            PyI24 { value: self.value }
-        }
-
-        fn __trunc__(&self) -> PyI24 {
-            PyI24 { value: self.value }
+        const fn __trunc__(&self) -> Self {
+            Self { value: self.value }
         }
     }
 
@@ -2077,10 +2136,9 @@ pub(crate) mod python {
 
         fn extract(obj: pyo3::Borrowed<'a, 'py, pyo3::PyAny>) -> PyResult<Self> {
             let py_int: i32 = obj.extract()?;
-            I24::try_from_i32(py_int).ok_or_else(|| {
+            Self::try_from_i32(py_int).ok_or_else(|| {
                 pyo3::exceptions::PyOverflowError::new_err(format!(
-                    "Value {} is out of range for I24 (-8388608 to 8388607)",
-                    py_int
+                    "Value {py_int} is out of range for I24 (-8388608 to 8388607)"
                 ))
             })
         }
@@ -2142,6 +2200,7 @@ impl I24Bytes {
     /// assert_eq!(value, i24::I24::try_from(123456).expect("Test value should convert successfully"));
     /// ```
     #[inline]
+    #[must_use]
     pub const fn to_i24_le(self) -> I24 {
         I24::from_le_bytes(self.0)
     }
@@ -2158,6 +2217,7 @@ impl I24Bytes {
     /// assert_eq!(value, i24::I24::try_from(123456).expect("Test value should convert successfully"));
     /// ```
     #[inline]
+    #[must_use]
     pub const fn to_i24_be(self) -> I24 {
         I24::from_be_bytes(self.0)
     }
@@ -2175,6 +2235,7 @@ impl I24Bytes {
     /// assert_eq!(value, original);
     /// ```
     #[inline]
+    #[must_use]
     pub const fn to_i24_ne(self) -> I24 {
         I24::from_ne_bytes(self.0)
     }
@@ -2191,6 +2252,7 @@ impl I24Bytes {
     /// assert_eq!(wire.0, [0x40, 0xE2, 0x01]); // little-endian bytes
     /// ```
     #[inline]
+    #[must_use]
     pub const fn from_i24_le(value: I24) -> Self {
         Self(value.to_le_bytes())
     }
@@ -2207,6 +2269,7 @@ impl I24Bytes {
     /// assert_eq!(wire.0, [0x01, 0xE2, 0x40]); // big-endian bytes
     /// ```
     #[inline]
+    #[must_use]
     pub const fn from_i24_be(value: I24) -> Self {
         Self(value.to_be_bytes())
     }
@@ -2223,6 +2286,7 @@ impl I24Bytes {
     /// // Byte order depends on target architecture endianness
     /// ```
     #[inline]
+    #[must_use]
     pub const fn from_i24_ne(value: I24) -> Self {
         Self(value.to_ne_bytes())
     }
@@ -2241,6 +2305,7 @@ impl I24Bytes {
     /// assert_eq!(wire.0, [0x40, 0xE2, 0x01]);
     /// ```
     #[inline]
+    #[must_use]
     pub const fn from_bytes(bytes: [u8; 3]) -> Self {
         Self(bytes)
     }
@@ -2256,6 +2321,7 @@ impl I24Bytes {
     /// assert_eq!(wire.to_bytes(), [0x40, 0xE2, 0x01]);
     /// ```
     #[inline]
+    #[must_use]
     pub const fn to_bytes(self) -> [u8; 3] {
         self.0
     }
@@ -2362,7 +2428,7 @@ mod i24_bytes_pyo3 {
                     py_bytes.len()
                 )));
             }
-            Ok(I24Bytes([py_bytes[0], py_bytes[1], py_bytes[2]]))
+            Ok(Self([py_bytes[0], py_bytes[1], py_bytes[2]]))
         }
     }
 }

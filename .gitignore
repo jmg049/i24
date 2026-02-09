@@ -1,3 +1,9 @@
 /target
 Cargo.lock
 i24_benches/target
+docs/build
+.vscode
+.venv
+__pycache__
+*.so
+*.pyc

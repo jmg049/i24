@@ -1,4 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![warn(clippy::all)]
+#![warn(clippy::nursery)]
 // Correctness and logic
 #![warn(clippy::unit_cmp)] // Detects comparing unit types
 #![warn(clippy::match_same_arms)] // Duplicate match arms

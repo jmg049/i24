@@ -1,6 +1,10 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
 [project]
 name = "i24"
-version = "2.2.0"
+version = "2.3.0"
 description = "Python bindings for working with 24-bit integers."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,13 +27,29 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
+dependencies = [
+    "numpy>=1.26"
+]
 
 [project.urls]
-Homepage = "https://github.com/jmg049/i24"
+homepage = "https://github.com/jmg049/i24"
 repository = "https://github.com/jmg049/i24"
-documentation = "https://docs.rs/i24"
+documentation = "https://jmg049.github.io/i24/"
 changelog = "https://github.com/jmg049/i24/blob/main/CHANGELOG.md"
+pypi = "https://pypi.org/project/i24/"
+issues = "https://github.com/jmg049/i24/issues"
 
-[build-system]
-requires = ["maturin>=1.0,<2.0"]
-build-backend = "maturin"
+[tool.maturin]
+features = ["pyo3"]
+module-name = "i24"
+python-source = "python"
+include = ["**/*.pyi", "**/py.typed"]
+exclude = ["**/examples/*", "**/tests/*", "**/*.rs"]
+
+[dependency-groups]
+dev = [
+    "myst-parser>=3.0.1",
+    "sphinx>=4.0",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-rtd-theme>=3.1.0",
+]
