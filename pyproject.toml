@@ -3,10 +3,10 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "i24"
-version = "2.3.0"
+name = "i24_type"
+version = "2.3.1"
 description = "Python bindings for working with 24-bit integers."
-readme = "README.md"
+readme = "python/README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [
