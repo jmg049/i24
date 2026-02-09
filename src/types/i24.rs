@@ -1203,14 +1203,14 @@ impl From<I24> for i32 {
 impl From<I24> for i64 {
     #[inline]
     fn from(value: I24) -> Self {
-        Self::from(value.to_i32())
+        <Self as From<i32>>::from(value.to_i32())
     }
 }
 
 impl From<I24> for i128 {
     #[inline]
     fn from(value: I24) -> Self {
-        Self::from(value.to_i32())
+        <Self as From<i32>>::from(value.to_i32())
     }
 }
 
@@ -1503,7 +1503,7 @@ impl ToBytes for I24 {
 impl ToPrimitive for I24 {
     #[inline]
     fn to_i64(&self) -> Option<i64> {
-        Some(i64::from(Self::to_i32(*self)))
+        Some(<i64 as From<i32>>::from(Self::to_i32(*self)))
     }
 
     #[inline]
@@ -1526,7 +1526,7 @@ impl ToPrimitive for I24 {
     #[inline]
     fn to_i16(&self) -> Option<i16> {
         let val = Self::to_i32(*self);
-        if val < i32::from(i16::MIN) || val > i32::from(i16::MAX) {
+        if val < <i32 as From<i16>>::from(i16::MIN) || val > <i32 as From<i16>>::from(i16::MAX) {
             None
         } else {
             Some(val as i16)
@@ -1536,7 +1536,7 @@ impl ToPrimitive for I24 {
     #[inline]
     fn to_u16(&self) -> Option<u16> {
         let val = Self::to_i32(*self);
-        if val < 0 || val > i32::from(u16::MAX) {
+        if val < 0 || val > <i32 as From<u16>>::from(u16::MAX) {
             None
         } else {
             Some(val as u16)
@@ -1546,7 +1546,7 @@ impl ToPrimitive for I24 {
     #[inline]
     fn to_i8(&self) -> Option<i8> {
         let val = Self::to_i32(*self);
-        if val < i32::from(i8::MIN) || val > i32::from(i8::MAX) {
+        if val < <i32 as From<i8>>::from(i8::MIN) || val > <i32 as From<i8>>::from(i8::MAX) {
             None
         } else {
             Some(val as i8)
@@ -1556,7 +1556,7 @@ impl ToPrimitive for I24 {
     #[inline]
     fn to_u8(&self) -> Option<u8> {
         let val = Self::to_i32(*self);
-        if val < 0 || val > i32::from(u8::MAX) {
+        if val < 0 || val > <i32 as From<u8>>::from(u8::MAX) {
             None
         } else {
             Some(val as u8)
@@ -1581,12 +1581,12 @@ impl ToPrimitive for I24 {
 
     #[inline]
     fn to_f64(&self) -> Option<f64> {
-        Some(f64::from(Self::to_i32(*self)))
+        Some(<f64 as From<i32>>::from(Self::to_i32(*self)))
     }
 
     #[inline]
     fn to_i128(&self) -> Option<i128> {
-        Some(i128::from(Self::to_i32(*self)))
+        Some(<i128 as From<i32>>::from(Self::to_i32(*self)))
     }
 
     #[inline]

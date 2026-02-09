@@ -94,14 +94,14 @@ impl From<U24> for u32 {
 impl From<U24> for u64 {
     #[inline]
     fn from(value: U24) -> Self {
-        Self::from(value.to_u32())
+        <Self as From<u32>>::from(value.to_u32())
     }
 }
 
 impl From<U24> for u128 {
     #[inline]
     fn from(value: U24) -> Self {
-        Self::from(value.to_u32())
+        <Self as From<u32>>::from(value.to_u32())
     }
 }
 
@@ -740,12 +740,12 @@ impl FromStr for U24 {
 impl ToPrimitive for U24 {
     #[inline]
     fn to_i64(&self) -> Option<i64> {
-        Some(i64::from(Self::to_u32(*self)))
+        Some(<i64 as From<u32>>::from(Self::to_u32(*self)))
     }
 
     #[inline]
     fn to_u64(&self) -> Option<u64> {
-        Some(u64::from(Self::to_u32(*self)))
+        Some(<u64 as From<u32>>::from(Self::to_u32(*self)))
     }
 
     #[inline]

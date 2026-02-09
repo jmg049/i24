@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.3] - 2026-02-09
+
+- Made calls to From traits more explicit to avoid ambiguity and ensure correct method resolution.
+
+## [2.3.2] - 2026-02-09
+
+- README tweaks mostly
+
 ## [2.3.0/1] - 2026-02-09
 
 - Freshened up python bindings.
