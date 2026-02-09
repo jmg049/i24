@@ -1,6 +1,6 @@
 [package]
 name = "i24"
-version = "2.3.1"
+version = "2.3.2"
 edition = "2024"
 license = "MIT"
 description = "A Rust library for working with 24-bit integers."
@@ -8,7 +8,11 @@ readme = "README.md"
 repository = "https://github.com/jmg049/i24"
 documentation = "https://docs.rs/i24"
 categories = ["data-structures", "mathematics", "encoding"]
-exclude = ["examples/*", "docs", "python/*", "i24_benches/*"]
+exclude = ["examples/", "docs", "python/", "i24_benches/",    
+    "pyproject.toml",
+    "uv.lock",
+    "build_docs.py",
+]
 
 [dependencies]
 bytemuck = { version = "1", features = ["derive"] }
