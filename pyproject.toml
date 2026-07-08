@@ -44,7 +44,7 @@ features = ["pyo3"]
 module-name = "i24"
 python-source = "python"
 include = ["**/*.pyi", "**/py.typed", "logo.png"]
-exclude = ["**/examples/*", "**/tests/*", "**/*.rs"]
+exclude = ["**/examples/*", "**/tests/*"]
 
 [dependency-groups]
 dev = [
