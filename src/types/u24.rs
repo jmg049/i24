@@ -535,7 +535,7 @@ impl U24 {
         let mut result = Vec::with_capacity(bytes.len() / 3);
 
         bytes.chunks_exact(3).for_each(|chunk| {
-            result.push(Self::from_be_bytes([chunk[0], chunk[1], chunk[2]]));
+            result.push(Self::from_le_bytes([chunk[0], chunk[1], chunk[2]]));
         });
 
         Some(result)
@@ -1818,6 +1818,30 @@ pub mod python {
 
 #[cfg(test)]
 mod tests {
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn slice_readers_decode_their_byte_order() {
+        use super::U24;
+
+        let values = [
+            U24::try_from_u32(0x01_02_03).expect("value is in range"),
+            U24::try_from_u32(0xAB_CD_EF).expect("value is in range"),
+        ];
+        let le = U24::write_u24s_le(&values);
+        let be = U24::write_u24s_be(&values);
+        assert_eq!(le, [0x03, 0x02, 0x01, 0xEF, 0xCD, 0xAB]);
+        assert_eq!(be, [0x01, 0x02, 0x03, 0xAB, 0xCD, 0xEF]);
+
+        assert_eq!(U24::read_u24s_le(&le).as_deref(), Some(&values[..]));
+        assert_eq!(U24::read_u24s_be(&be).as_deref(), Some(&values[..]));
+        // SAFETY: both lengths are multiples of 3.
+        unsafe {
+            assert_eq!(U24::read_u24s_le_unchecked(&le), values);
+            assert_eq!(U24::read_u24s_be_unchecked(&be), values);
+        }
+        assert_eq!(U24::read_u24s_le(&le[..4]), None);
+    }
 
     #[cfg(feature = "ndarray")]
     #[test]

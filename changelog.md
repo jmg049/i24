@@ -5,6 +5,8 @@
 - The `pyo3` feature no longer enables pyo3's `experimental-inspect`. It embedded
   introspection data and exported symbols in every Python extension built on this
   crate, and nothing reads them.
+- `U24::read_u24s_le` decoded each value as big-endian. It now reads little-endian,
+  as its name, its documentation and `read_u24s_le_unchecked` say.
 
 ## [2.3.5] - 2026-07-08
 
