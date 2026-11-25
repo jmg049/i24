@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.3.6] - Unreleased
+
+- The `pyo3` feature no longer enables pyo3's `experimental-inspect`. It embedded
+  introspection data and exported symbols in every Python extension built on this
+  crate, and nothing reads them.
+
+## [2.3.5] - 2026-07-08
+
+- The `pyo3` feature no longer enables pyo3's deprecated `extension-module` feature.
+
+## [2.3.4] - 2026-06-22
+
+- pyo3 and numpy 0.29.
+
 ## [2.3.3] - 2026-02-09
 
 - Made calls to From traits more explicit to avoid ambiguity and ensure correct method resolution.
