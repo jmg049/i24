@@ -822,7 +822,7 @@ impl I24 {
     /// `Some(Vec<I24>)` containing the parsed values, or `None` if the input slice
     /// length is not a multiple of 3.
     #[cfg(feature = "alloc")]
-    pub fn read_i24s_le(bytes: &[u8]) -> Option<Vec<I24>> {
+    pub fn read_i24s_le(bytes: &[u8]) -> Option<Vec<Self>> {
         if !bytes.len().is_multiple_of(3) {
             return None;
         }
@@ -830,7 +830,7 @@ impl I24 {
         let mut result = Vec::with_capacity(bytes.len() / 3);
 
         bytes.chunks_exact(3).for_each(|chunk| {
-            result.push(I24::from_le_bytes([chunk[0], chunk[1], chunk[2]]));
+            result.push(Self::from_le_bytes([chunk[0], chunk[1], chunk[2]]));
         });
 
         Some(result)
@@ -851,13 +851,13 @@ impl I24 {
     /// `Some(&[I24])` containing a slice view of the parsed values, or `None` if the input slice
     /// length is not a multiple of 3.
     #[cfg(feature = "alloc")]
-    pub const fn read_i24s_le_slice(bytes: &[u8]) -> Option<&[I24]> {
+    pub const fn read_i24s_le_slice(bytes: &[u8]) -> Option<&[Self]> {
         if !bytes.len().is_multiple_of(3) {
             return None;
         }
 
         let result =
-            unsafe { core::slice::from_raw_parts(bytes.as_ptr() as *const I24, bytes.len() / 3) };
+            unsafe { core::slice::from_raw_parts(bytes.as_ptr() as *const Self, bytes.len() / 3) };
 
         Some(result)
     }
@@ -878,7 +878,7 @@ impl I24 {
     /// `Some(Vec<I24>)` containing the parsed values, or `None` if the input slice
     /// length is not a multiple of 3.
     #[cfg(feature = "alloc")]
-    pub fn read_i24s_be(bytes: &[u8]) -> Option<Vec<I24>> {
+    pub fn read_i24s_be(bytes: &[u8]) -> Option<Vec<Self>> {
         if !bytes.len().is_multiple_of(3) {
             return None;
         }
@@ -886,7 +886,7 @@ impl I24 {
         let mut result = Vec::with_capacity(bytes.len() / 3);
 
         bytes.chunks_exact(3).for_each(|chunk| {
-            result.push(I24::from_be_bytes([chunk[0], chunk[1], chunk[2]]));
+            result.push(Self::from_be_bytes([chunk[0], chunk[1], chunk[2]]));
         });
 
         Some(result)
@@ -907,7 +907,7 @@ impl I24 {
     ///
     /// A vector containing the parsed `I24` values.
     #[cfg(feature = "alloc")]
-    pub unsafe fn read_i24s_le_unchecked(bytes: &[u8]) -> Vec<I24> {
+    pub unsafe fn read_i24s_le_unchecked(bytes: &[u8]) -> Vec<Self> {
         debug_assert!(bytes.len().is_multiple_of(3));
         let chunks: &[I24Bytes] = bytemuck::cast_slice(bytes);
         chunks.iter().map(|b| b.to_i24_le()).collect()
@@ -919,9 +919,9 @@ impl I24 {
     /// # Safety
     ///
     /// The caller must ensure that `bytes.len()` is a multiple of 3.
-    pub unsafe fn read_i24s_le_slice_unchecked(bytes: &[u8]) -> &[I24] {
+    pub unsafe fn read_i24s_le_slice_unchecked(bytes: &[u8]) -> &[Self] {
         debug_assert!(bytes.len().is_multiple_of(3));
-        unsafe { core::slice::from_raw_parts(bytes.as_ptr() as *const I24, bytes.len() / 3) }
+        unsafe { core::slice::from_raw_parts(bytes.as_ptr() as *const Self, bytes.len() / 3) }
     }
 
     /// Reads multiple `I24` values from a byte slice in big-endian format without length validation.
@@ -939,7 +939,7 @@ impl I24 {
     ///
     /// A vector containing the parsed `I24` values.
     #[cfg(feature = "alloc")]
-    pub unsafe fn read_i24s_be_unchecked(bytes: &[u8]) -> Vec<I24> {
+    pub unsafe fn read_i24s_be_unchecked(bytes: &[u8]) -> Vec<Self> {
         debug_assert!(bytes.len().is_multiple_of(3));
         let chunks: &[I24Bytes] = bytemuck::cast_slice(bytes);
         chunks.iter().map(|b| b.to_i24_be()).collect()
@@ -947,7 +947,7 @@ impl I24 {
 
     /// Converts a slice of I24 values to a Vec of bytes in little-endian order.
     #[cfg(feature = "alloc")]
-    pub fn write_i24s_le(values: &[I24]) -> Vec<u8> {
+    pub fn write_i24s_le(values: &[Self]) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(values.len() * 3);
         for &value in values {
             bytes.extend_from_slice(&value.to_le_bytes());
@@ -957,7 +957,7 @@ impl I24 {
 
     /// Converts a slice of I24 values to a Vec of bytes in big-endian order.
     #[cfg(feature = "alloc")]
-    pub fn write_i24s_be(values: &[I24]) -> Vec<u8> {
+    pub fn write_i24s_be(values: &[Self]) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(values.len() * 3);
         for &value in values {
             bytes.extend_from_slice(&value.to_be_bytes());
@@ -976,7 +976,7 @@ impl I24 {
     /// `Some(Vec<I24>)` containing the parsed values, or `None` if the input slice
     /// length is not a multiple of 3.
     #[cfg(feature = "alloc")]
-    pub fn read_i24s_ne(bytes: &[u8]) -> Option<Vec<I24>> {
+    pub fn read_i24s_ne(bytes: &[u8]) -> Option<Vec<Self>> {
         if !bytes.len().is_multiple_of(3) {
             return None;
         }
@@ -984,7 +984,7 @@ impl I24 {
         let mut result = Vec::with_capacity(bytes.len() / 3);
 
         bytes.chunks_exact(3).for_each(|chunk| {
-            result.push(I24::from_ne_bytes([chunk[0], chunk[1], chunk[2]]));
+            result.push(Self::from_ne_bytes([chunk[0], chunk[1], chunk[2]]));
         });
 
         Some(result)
@@ -992,7 +992,7 @@ impl I24 {
 
     /// Converts a slice of I24 values to a Vec of bytes in native-endian order.
     #[cfg(feature = "alloc")]
-    pub fn write_i24s_ne(values: &[I24]) -> Vec<u8> {
+    pub fn write_i24s_ne(values: &[Self]) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(values.len() * 3);
         for &value in values {
             bytes.extend_from_slice(&value.to_ne_bytes());
@@ -1621,8 +1621,8 @@ impl NumCast for I24 {
     /// use num_traits::NumCast;
     ///
     /// // Successful conversions
-    /// assert_eq!(<I24 as NumCast>::from(1000i32), Some(I24::try_from_i32(1000).unwrap()));
-    /// assert_eq!(<I24 as NumCast>::from(500u16), Some(I24::try_from_i32(500).unwrap()));
+    /// assert_eq!(<I24 as NumCast>::from(1000i32), Some(I24::try_from_i32(1000).expect("value is in range")));
+    /// assert_eq!(<I24 as NumCast>::from(500u16), Some(I24::try_from_i32(500).expect("value is in range")));
     ///
     /// // Out of range conversions
     /// assert_eq!(<I24 as NumCast>::from(10_000_000i32), None);
@@ -2894,7 +2894,7 @@ mod i24_tests {
                 let ch4 = I24::from_le_bytes([bytes[13], bytes[14], bytes[15]]);
                 let s = I24::from_le_bytes([bytes[16], bytes[17], bytes[18]]);
 
-                Some(TestDataStruct {
+                Some(Self {
                     t,
                     ch1,
                     ch2,
@@ -3436,23 +3436,23 @@ mod i24_tests {
         // Test successful conversions from various types
         assert_eq!(
             <I24 as NumCast>::from(1000i32),
-            Some(I24::try_from_i32(1000).unwrap())
+            Some(I24::try_from_i32(1000).expect("value is in range"))
         );
         assert_eq!(
             <I24 as NumCast>::from(500u16),
-            Some(I24::try_from_i32(500).unwrap())
+            Some(I24::try_from_i32(500).expect("value is in range"))
         );
         assert_eq!(
             <I24 as NumCast>::from(100i8),
-            Some(I24::try_from_i32(100).unwrap())
+            Some(I24::try_from_i32(100).expect("value is in range"))
         );
         assert_eq!(
             <I24 as NumCast>::from(200u8),
-            Some(I24::try_from_i32(200).unwrap())
+            Some(I24::try_from_i32(200).expect("value is in range"))
         );
         assert_eq!(
             <I24 as NumCast>::from(-1000i32),
-            Some(I24::try_from_i32(-1000).unwrap())
+            Some(I24::try_from_i32(-1000).expect("value is in range"))
         );
 
         // Test out of range conversions return None
@@ -3467,11 +3467,11 @@ mod i24_tests {
         // Test floating point conversions
         assert_eq!(
             <I24 as NumCast>::from(1000.0f32),
-            Some(I24::try_from_i32(1000).unwrap())
+            Some(I24::try_from_i32(1000).expect("value is in range"))
         );
         assert_eq!(
             <I24 as NumCast>::from(-500.5f32),
-            Some(I24::try_from_i32(-500).unwrap())
+            Some(I24::try_from_i32(-500).expect("value is in range"))
         );
         assert_eq!(<I24 as NumCast>::from(1e10f64), None); // Too large
     }

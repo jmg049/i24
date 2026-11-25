@@ -520,22 +520,22 @@ impl U24 {
     /// # Arguments
     ///
     /// * `bytes` - A byte slice containing 24-bit unsigned integers in little-endian format.
-    ///             The length must be a multiple of 3.
+    ///   The length must be a multiple of 3.
     ///
     /// # Returns
     ///
     /// `Some(Vec<U24>)` containing the parsed values, or `None` if the input slice
     /// length is not a multiple of 3.
     #[cfg(feature = "alloc")]
-    pub fn read_u24s_le(bytes: &[u8]) -> Option<Vec<U24>> {
-        if bytes.len() % 3 != 0 {
+    pub fn read_u24s_le(bytes: &[u8]) -> Option<Vec<Self>> {
+        if !bytes.len().is_multiple_of(3) {
             return None;
         }
 
         let mut result = Vec::with_capacity(bytes.len() / 3);
 
         bytes.chunks_exact(3).for_each(|chunk| {
-            result.push(U24::from_be_bytes([chunk[0], chunk[1], chunk[2]]));
+            result.push(Self::from_be_bytes([chunk[0], chunk[1], chunk[2]]));
         });
 
         Some(result)
@@ -550,22 +550,22 @@ impl U24 {
     /// # Arguments
     ///
     /// * `bytes` - A byte slice containing 24-bit unsigned integers in big-endian format.
-    ///            The length must be a multiple of 3.
+    ///   The length must be a multiple of 3.
     ///
     /// # Returns
     ///
     /// `Some(Vec<U24>)` containing the parsed values, or `None` if the input slice
     /// length is not a multiple of 3.
     #[cfg(feature = "alloc")]
-    pub fn read_u24s_be(bytes: &[u8]) -> Option<Vec<U24>> {
-        if bytes.len() % 3 != 0 {
+    pub fn read_u24s_be(bytes: &[u8]) -> Option<Vec<Self>> {
+        if !bytes.len().is_multiple_of(3) {
             return None;
         }
 
         let mut result = Vec::with_capacity(bytes.len() / 3);
 
         bytes.chunks_exact(3).for_each(|chunk| {
-            result.push(U24::from_be_bytes([chunk[0], chunk[1], chunk[2]]));
+            result.push(Self::from_be_bytes([chunk[0], chunk[1], chunk[2]]));
         });
 
         Some(result)
@@ -586,8 +586,8 @@ impl U24 {
     ///
     /// A vector containing the parsed `U24` values.
     #[cfg(feature = "alloc")]
-    pub unsafe fn read_u24s_le_unchecked(bytes: &[u8]) -> Vec<U24> {
-        debug_assert!(bytes.len() % 3 == 0);
+    pub unsafe fn read_u24s_le_unchecked(bytes: &[u8]) -> Vec<Self> {
+        debug_assert!(bytes.len().is_multiple_of(3));
         let chunks: &[U24Bytes] = bytemuck::cast_slice(bytes);
         chunks.iter().map(|b| b.to_u24_le()).collect()
     }
@@ -607,15 +607,15 @@ impl U24 {
     ///
     /// A vector containing the parsed `U24` values.
     #[cfg(feature = "alloc")]
-    pub unsafe fn read_u24s_be_unchecked(bytes: &[u8]) -> Vec<U24> {
-        debug_assert!(bytes.len() % 3 == 0);
+    pub unsafe fn read_u24s_be_unchecked(bytes: &[u8]) -> Vec<Self> {
+        debug_assert!(bytes.len().is_multiple_of(3));
         let chunks: &[U24Bytes] = bytemuck::cast_slice(bytes);
         chunks.iter().map(|b| b.to_u24_be()).collect()
     }
 
     /// Converts a slice of U24 values to a Vec of bytes in little-endian order.
     #[cfg(feature = "alloc")]
-    pub fn write_u24s_le(values: &[U24]) -> Vec<u8> {
+    pub fn write_u24s_le(values: &[Self]) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(values.len() * 3);
         for &value in values {
             bytes.extend_from_slice(&value.to_le_bytes());
@@ -625,7 +625,7 @@ impl U24 {
 
     /// Converts a slice of U24 values to a Vec of bytes in big-endian order.
     #[cfg(feature = "alloc")]
-    pub fn write_u24s_be(values: &[U24]) -> Vec<u8> {
+    pub fn write_u24s_be(values: &[Self]) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(values.len() * 3);
         for &value in values {
             bytes.extend_from_slice(&value.to_be_bytes());
@@ -790,8 +790,8 @@ impl NumCast for U24 {
     /// use num_traits::NumCast;
     ///
     /// // Successful conversions
-    /// assert_eq!(<U24 as NumCast>::from(1000u32), Some(U24::try_from_u32(1000).unwrap()));
-    /// assert_eq!(<U24 as NumCast>::from(500i16), Some(U24::try_from_u32(500).unwrap()));
+    /// assert_eq!(<U24 as NumCast>::from(1000u32), Some(U24::try_from_u32(1000).expect("value is in range")));
+    /// assert_eq!(<U24 as NumCast>::from(500i16), Some(U24::try_from_u32(500).expect("value is in range")));
     ///
     /// // Out of range or negative conversions
     /// assert_eq!(<U24 as NumCast>::from(20_000_000u32), None);
@@ -1847,23 +1847,23 @@ mod tests {
         // Test successful conversions from various types
         assert_eq!(
             <U24 as NumCast>::from(1000u32),
-            Some(U24::try_from_u32(1000).unwrap())
+            Some(U24::try_from_u32(1000).expect("value is in range"))
         );
         assert_eq!(
             <U24 as NumCast>::from(500u16),
-            Some(U24::try_from_u32(500).unwrap())
+            Some(U24::try_from_u32(500).expect("value is in range"))
         );
         assert_eq!(
             <U24 as NumCast>::from(100u8),
-            Some(U24::try_from_u32(100).unwrap())
+            Some(U24::try_from_u32(100).expect("value is in range"))
         );
         assert_eq!(
             <U24 as NumCast>::from(200i16),
-            Some(U24::try_from_u32(200).unwrap())
+            Some(U24::try_from_u32(200).expect("value is in range"))
         );
         assert_eq!(
             <U24 as NumCast>::from(50i8),
-            Some(U24::try_from_u32(50).unwrap())
+            Some(U24::try_from_u32(50).expect("value is in range"))
         );
 
         // Test out of range conversions return None
@@ -1878,11 +1878,11 @@ mod tests {
         // Test floating point conversions
         assert_eq!(
             <U24 as NumCast>::from(1000.0f32),
-            Some(U24::try_from_u32(1000).unwrap())
+            Some(U24::try_from_u32(1000).expect("value is in range"))
         );
         assert_eq!(
             <U24 as NumCast>::from(500.9f32),
-            Some(U24::try_from_u32(500).unwrap())
+            Some(U24::try_from_u32(500).expect("value is in range"))
         ); // Truncated
         assert_eq!(<U24 as NumCast>::from(1e10f64), None); // Too large
         assert_eq!(<U24 as NumCast>::from(-100.0f32), None); // Negative

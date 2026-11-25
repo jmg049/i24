@@ -73,7 +73,7 @@ impl DataStructWireLE {
 pub fn parse_records_zerocopy(bytes: &[u8]) -> Option<Vec<DataStruct>> {
     // Check if the length is compatible with our wire struct size
     const STRUCT_SIZE: usize = 19; // 4 + 5*3 bytes
-    if bytes.len() % STRUCT_SIZE != 0 {
+    if !bytes.len().is_multiple_of(STRUCT_SIZE) {
         return None;
     }
 
@@ -96,7 +96,7 @@ pub fn parse_records_zerocopy(bytes: &[u8]) -> Option<Vec<DataStruct>> {
 /// Note: This demonstrates direct memory access to packed structs
 pub fn view_records_zerocopy(bytes: &[u8]) -> Option<Vec<&DataStructWireLE>> {
     const STRUCT_SIZE: usize = 19;
-    if bytes.len() % STRUCT_SIZE != 0 {
+    if !bytes.len().is_multiple_of(STRUCT_SIZE) {
         return None;
     }
 
