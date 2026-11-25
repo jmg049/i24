@@ -52,4 +52,5 @@ dev = [
     "sphinx>=4.0",
     "sphinx-copybutton>=0.5.2",
     "sphinx-rtd-theme>=3.1.0",
+    "ziglang>=0.16.0",
 ]
